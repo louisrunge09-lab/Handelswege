@@ -21,6 +21,7 @@
     const SUPABASE_URL = "https://rejrcuapcendtviezvfc.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlanJjdWFwY2VuZHR2aWV6dmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNjQwNzcsImV4cCI6MjA5Nzg0MDA3N30.ru33fqL5plRCZRwzEe8qQTJ25Bv3MstXt-wi5Y2IqI0";
 
+    const VERSION = "v1.8";
     const PLAYER_COLORS = ["#f4a261", "#457b9d", "#2a9d8f", "#e76f51"];
     const RESOURCES = ["Holz", "Stein", "Getreide", "Gold"];
     const RES_ICONS = { Holz: "🪵", Stein: "🪨", Getreide: "🌾", Gold: "🪙" };
@@ -344,9 +345,9 @@
         try {
           const code = joinCode.trim().toUpperCase();
           const room = await sb.current.getRoom(code);
-          if (!room) { setError("❌ Raum ""+code+"" nicht gefunden"); setFeedback(""); setLoading(false); return; }
-          if (room.state.phase !== "lobby") { setError("⏳ Spiel in Raum "+code+" läuft bereits"); setFeedback(""); setLoading(false); return; }
-          if (room.state.players.length >= 4) { setError("🚫 Raum "+code+" ist voll (4/4)"); setFeedback(""); setLoading(false); return; }
+          if (!room) { setError("❌ Raum " + code + " nicht gefunden"); setFeedback(""); setLoading(false); return; }
+          if (room.state.phase !== "lobby") { setError("⏳ Spiel in Raum " + code + " läuft bereits"); setFeedback(""); setLoading(false); return; }
+          if (room.state.players.length >= 4) { setError("🚫 Raum " + code + " ist voll (4/4)"); setFeedback(""); setLoading(false); return; }
           const idx = room.state.players.length;
           const newPs = [...room.state.players, {name:myName.trim(), color:PLAYER_COLORS[idx]}];
           const newGs = {...room.state, players:newPs};
@@ -858,7 +859,7 @@
       return (
         <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",flexDirection:"row",alignItems:"flex-start"}}>
           {/* Main game column */}
-          <div style={{flex:1,minWidth:0,padding:"12px 12px 40px",maxWidth:620}}>
+          <div style={{flex:1,minWidth:0,padding:"12px 12px 40px",maxWidth:620,marginRight:270}}>
 
             {/* Header */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,position:"relative"}}>
@@ -915,7 +916,12 @@
               )}
             </div>
 
-            {/* Menu overlay to close on outside click */}
+            {/* Version badge */}
+            <div style={{position:"fixed",bottom:10,left:10,color:"#333",fontSize:10,letterSpacing:1,zIndex:50,pointerEvents:"none"}}>
+              {VERSION}
+            </div>
+
+          {/* Menu overlay to close on outside click */}
             {menuOpen && (
               <div onClick={()=>setMenuOpen(false)}
                 style={{position:"fixed",inset:0,zIndex:199}}/>
@@ -1193,20 +1199,21 @@
 
           </div>{/* end main column */}
 
-          {/* Chat sidebar */}
+          {/* Chat sidebar — fixed, full height, no scroll needed */}
           <div style={{
-            width:280, minWidth:240, maxWidth:320,
-            height:"100vh", position:"sticky", top:0,
+            width:270, minWidth:220, maxWidth:300,
+            position:"fixed", top:0, right:0, bottom:0,
             background:"#1a1e2c", borderLeft:"1px solid #252a3a",
             display:"flex", flexDirection:"column",
+            zIndex:50,
           }}>
-            <div style={{color:"#555",fontSize:11,letterSpacing:1,padding:"14px 14px 6px",borderBottom:"1px solid #252a3a"}}>
+            <div style={{color:"#555",fontSize:11,letterSpacing:1,padding:"12px 14px 6px",borderBottom:"1px solid #252a3a",flexShrink:0}}>
               💬 CHAT
             </div>
-            <div style={{flex:1,overflowY:"auto",padding:"8px 14px"}}>
+            <div style={{flex:1,overflowY:"auto",padding:"6px 12px",minHeight:0}}>
               {(gs.chat||[]).length===0&&<div style={{color:"#444",fontSize:13,padding:"8px 0"}}>Noch keine Nachrichten…</div>}
               {(gs.chat||[]).map((m,i)=>(
-                <div key={i} style={{marginBottom:8}}>
+                <div key={i} style={{marginBottom:6}}>
                   <span style={{color:m.color,fontWeight:700,fontSize:13}}>{m.name}</span>
                   <span style={{color:"#444",fontSize:11}}> · </span>
                   <span style={{color:"#bbb",fontSize:13}}>{m.text}</span>
@@ -1214,12 +1221,12 @@
               ))}
               <div ref={chatEndRef}/>
             </div>
-            <div style={{padding:"8px 10px 12px",borderTop:"1px solid #252a3a",display:"flex",gap:6}}>
+            <div style={{padding:"8px 10px 10px",borderTop:"1px solid #252a3a",display:"flex",gap:6,flexShrink:0}}>
               <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&sendChat()}
                 placeholder="Nachricht…" maxLength={80}
-                style={{flex:1,background:"#252a3a",border:"1px solid #333",borderRadius:8,padding:"10px 12px",color:"#fff",fontSize:14,outline:"none"}}/>
-              <button onClick={sendChat} style={{background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"10px 14px",fontWeight:700,fontSize:16,cursor:"pointer"}}>➤</button>
+                style={{flex:1,background:"#252a3a",border:"1px solid #333",borderRadius:8,padding:"8px 10px",color:"#fff",fontSize:13,outline:"none"}}/>
+              <button onClick={sendChat} style={{background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"8px 12px",fontWeight:700,fontSize:15,cursor:"pointer"}}>➤</button>
             </div>
           </div>
 
