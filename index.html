@@ -211,6 +211,18 @@
       { cost: { Gold: 4 }, steal: 3, desc: "Klaut 3 zufällige Res." },
     ];
 
+    // Ereigniskarten — jede Runde 40% Chance auf ein Ereignis
+    const EVENTS = [
+      { id:"durre",      label:"🌵 Dürre",       desc:"Alle verlieren 2 Getreide",       apply:(ps)=>ps.map(p=>({...p,resources:{...p.resources,Getreide:Math.max(0,(p.resources.Getreide||0)-2)}})) },
+      { id:"goldfieber", label:"⛏️ Goldrausch",  desc:"Mine-Besitzer bekommen +4 Gold",  apply:(ps)=>ps.map(p=>(p.buildings.mine||0)>0?{...p,resources:{...p.resources,Gold:(p.resources.Gold||0)+4}}:p) },
+      { id:"marktboom",  label:"📈 Marktboom",   desc:"Markt-Besitzer bekommen +3 Gold", apply:(ps)=>ps.map(p=>(p.buildings.markt||0)>0?{...p,resources:{...p.resources,Gold:(p.resources.Gold||0)+3}}:p) },
+      { id:"ernte",      label:"🌾 Ernte",        desc:"Alle bekommen +3 Getreide",       apply:(ps)=>ps.map(p=>({...p,resources:{...p.resources,Getreide:(p.resources.Getreide||0)+3}})) },
+      { id:"sturm",      label:"🌪️ Sturm",       desc:"Alle verlieren 2 Holz",           apply:(ps)=>ps.map(p=>({...p,resources:{...p.resources,Holz:Math.max(0,(p.resources.Holz||0)-2)}})) },
+      { id:"steuergnade",label:"🎁 Steuergnade", desc:"Alle bekommen +2 Gold",           apply:(ps)=>ps.map(p=>({...p,resources:{...p.resources,Gold:(p.resources.Gold||0)+2}})) },
+      { id:"frieden",    label:"🕊️ Frieden",     desc:"Kein Finanzamt diese Runde",      skipFinanzamt:true, apply:(ps)=>ps },
+      { id:"burg_bonus", label:"🏰 Burgfest",    desc:"Burg-Besitzer bekommen +3 Gold",  apply:(ps)=>ps.map(p=>(p.buildings.burg||0)>0?{...p,resources:{...p.resources,Gold:(p.resources.Gold||0)+3}}:p) },
+    ];
+
     // Bank trades
     const BANK_TRADES = [
       // Res → Gold
@@ -316,6 +328,8 @@
         log: ["Runde 1 beginnt — alle spielen gleichzeitig! Ziel: " + (MODES[mode] || MODES.normal).winVP + " VP"],
         chat: [],
         tradeOffers: [],
+        alliances: [],
+        allianceOffers: [],
         winner: null,
       };
     }
@@ -517,6 +531,51 @@
       return p;
     }
 
+    // ── ROUND SUMMARY MODAL ──────────────────────────────────────────────────
+    function RoundSummaryModal({summary, onClose}) {
+      if (!summary) return null;
+      return (
+        <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.82)",padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#1b1f2e",borderRadius:16,padding:"20px 18px",maxWidth:370,width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 0 40px rgba(0,0,0,0.6)"}}>
+            <div style={{color:"#f4a261",fontWeight:900,fontSize:17,marginBottom:14,textAlign:"center"}}>⚔️ Runde {summary.round} — Auswertung</div>
+
+            {summary.event && (
+              <div style={{background:"#252a3a",borderRadius:10,padding:"10px 14px",marginBottom:14,textAlign:"center",border:"1px solid #3a4060"}}>
+                <div style={{fontSize:22,marginBottom:4}}>{summary.event.label}</div>
+                <div style={{color:"#aaa",fontSize:13}}>{summary.event.desc}</div>
+              </div>
+            )}
+
+            <div style={{marginBottom:14}}>
+              <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:8}}>VP-STAND</div>
+              {summary.vpAfter.map((p,i)=>{
+                const diff = p.vp - (summary.vpBefore[i]?.vp||0);
+                return (
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid #252a3a"}}>
+                    <span style={{color:p.color,fontWeight:700,fontSize:13}}>{p.name}</span>
+                    <span style={{color:"#fff",fontWeight:700}}>{p.vp} VP {diff>0&&<span style={{color:"#2a9d8f",fontSize:12}}>+{diff}</span>}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {summary.raidLogs.length>0&&(
+              <div style={{marginBottom:14}}>
+                <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:8}}>EREIGNISSE</div>
+                {summary.raidLogs.map((l,i)=>(
+                  <div key={i} style={{color:"#bbb",fontSize:12,padding:"3px 0",borderBottom:"1px solid #1a1e2c"}}>{l}</div>
+                ))}
+              </div>
+            )}
+
+            <button onClick={onClose} style={{width:"100%",background:"linear-gradient(135deg,#2a9d8f,#21867a)",border:"none",borderRadius:10,color:"#fff",padding:13,fontWeight:800,fontSize:15,cursor:"pointer"}}>
+              Weiter ▶
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     // ── APP ──────────────────────────────────────────────────────────────────
     function App() {
       const [screen, setScreen] = useState("home");
@@ -544,7 +603,9 @@
       const [chatMsg, setChatMsg] = useState("");
       const [chatTarget, setChatTarget] = useState(null); // null = an alle, idx = privat an Spieler
       const [menuOpen, setMenuOpen] = useState(false);
-      const [raidAlert, setRaidAlert] = useState(null); // {msg, type} shown as popup
+      const [raidAlert, setRaidAlert] = useState(null);
+      const [roundSummary, setRoundSummary] = useState(null);
+      const [isSpectator, setIsSpectator] = useState(false);
       const chatEndRef = useRef(null);
 
       const sb = useRef(makeSB());
@@ -726,7 +787,12 @@
           const code = joinCode.trim().toUpperCase();
           const room = await sb.current.getRoom(code);
           if (!room) { setError("❌ Raum " + code + " nicht gefunden"); setFeedback(""); setLoading(false); return; }
-          if (room.state.phase !== "lobby") { setError("⏳ Spiel in Raum " + code + " läuft bereits"); setFeedback(""); setLoading(false); return; }
+          if (room.state.phase === "playing") {
+            codeRef.current = code; setRoomCode(code); setMyIndex(null); setIsHost(false);
+            setGs(room.state); setIsSpectator(true); subscribe(code); setScreen("game");
+            setFeedback(""); setLoading(false); return;
+          }
+          if (room.state.phase === "finished") { setError("⏳ Spiel in Raum " + code + " ist bereits beendet"); setFeedback(""); setLoading(false); return; }
           if (room.state.players.length >= 10) { setError("🚫 Raum " + code + " ist voll (10/10)"); setFeedback(""); setLoading(false); return; }
           const idx = room.state.players.length;
           const newPs = [...room.state.players, {name:myName.trim(), color:PLAYER_COLORS[idx]}];
@@ -898,6 +964,34 @@
         await push({...gs, players: newPlayers});
       }
 
+      async function proposeAlliance(targetIdx) {
+        if (!me || me.ready) return;
+        const already = (gs.allianceOffers||[]).find(o=>o.from===myIndex&&o.to===targetIdx);
+        const alreadyAllied = (gs.alliances||[]).find(a=>(a.a===myIndex&&a.b===targetIdx)||(a.a===targetIdx&&a.b===myIndex));
+        if (already || alreadyAllied) return;
+        const newOffers = [...(gs.allianceOffers||[]), {from:myIndex, to:targetIdx}];
+        let g = addLog({...gs, allianceOffers:newOffers}, "🤝 "+me.name+" bietet "+gs.players[targetIdx].name+" eine Allianz an");
+        await push(g);
+      }
+
+      async function acceptAlliance(offer) {
+        const newOffers = (gs.allianceOffers||[]).filter(o=>!(o.from===offer.from&&o.to===offer.to));
+        const newAlliances = [...(gs.alliances||[]), {a:offer.from, b:offer.to, endsAfter: gs.round+3}];
+        let g = addLog({...gs, allianceOffers:newOffers, alliances:newAlliances},
+          "🤝 "+gs.players[offer.from].name+" & "+gs.players[offer.to].name+" sind Verbündete! (3 Runden)");
+        await push(g);
+      }
+
+      async function declineAlliance(offer) {
+        const newOffers = (gs.allianceOffers||[]).filter(o=>!(o.from===offer.from&&o.to===offer.to));
+        let g = addLog({...gs, allianceOffers:newOffers}, gs.players[myIndex].name+" lehnt Allianz ab");
+        await push(g);
+      }
+
+      function isAllied(i, j) {
+        return !!(gs&&(gs.alliances||[]).find(a=>((a.a===i&&a.b===j)||(a.a===j&&a.b===i))&&a.endsAfter>gs.round));
+      }
+
       async function deleteRoom() {
         if (!isHost || !gs) return;
         if (!window.confirm("Lobby wirklich löschen? Alle Spieler werden entfernt.")) return;
@@ -989,25 +1083,43 @@
 
         // Check if all ready
         const allReady = newPlayers.every(p => p.ready);
+        let summaryData = null;
         if (allReady) {
           const raidLogs = [];
-          // Resolve round: apply pending builds + income
-          // First apply builds and income
           const gMode = freshGs.gameMode;
+
+          // Expire old alliances
+          const activeAlliances = (freshGs.alliances||[]).filter(a => a.endsAfter > freshGs.round);
+
+          // Resolve builds + income
           let resolved = newPlayers.map(p => {
             let np = {...p, ready: false, buildings: {...(p.buildings||{})}};
-            for (const pb of (np.pendingBuilds||[])) {
-              np.buildings[pb.bid] = pb.level;
-            }
+            for (const pb of (np.pendingBuilds||[])) np.buildings[pb.bid] = pb.level;
             np.pendingBuilds = [];
             np = applyIncome(np, gMode);
             return np;
           });
 
-          // Apply raids — raider gets SOME, rest disappears (chaos tax)
+          const vpBefore = freshGs.players.map(p => ({name:p.name, color:p.color, vp:calcVP(p)}));
+
+          // Random event (40% chance)
+          let activeEvent = null;
+          if (Math.random() < 0.4) {
+            activeEvent = EVENTS[Math.floor(Math.random()*EVENTS.length)];
+            resolved = activeEvent.apply(resolved);
+            if (activeEvent.label) raidLogs.push("🎲 EREIGNIS: "+activeEvent.label+" — "+activeEvent.desc);
+          }
+
+          // Apply raids — blocked by alliance
           newPlayers.forEach((p, i) => {
             if (!p.pendingRaeuber) return;
             const {target, level} = p.pendingRaeuber;
+            const allied = activeAlliances.find(a=>(a.a===i&&a.b===target)||(a.a===target&&a.b===i));
+            if (allied) {
+              raidLogs.push("🤝 "+p.name+" wollte "+resolved[target].name+" überfallen — aber Allianz schützt!");
+              resolved[i] = {...resolved[i], pendingRaeuber: null};
+              return;
+            }
             const rd = RAEUBER_LEVELS[level-1];
             const victim = resolved[target];
             const available = RESOURCES.filter(r => (victim.resources[r]||0) > 0);
@@ -1016,7 +1128,6 @@
               resolved[i] = {...resolved[i], pendingRaeuber: null};
               return;
             }
-            // Steal MORE than before (level * 2 items taken from victim)
             let totalTaken = {};
             const takeCount = rd.steal * 2;
             for (let s = 0; s < takeCount; s++) {
@@ -1025,14 +1136,11 @@
               const pick = still[Math.floor(Math.random()*still.length)];
               totalTaken[pick] = (totalTaken[pick]||0)+1;
             }
-            // Raider only gets ~60% — rest is lost in the chaos
-            let raiderGets = {};
-            let lost = {};
+            let raiderGets = {}, lost = {};
             for (const [r,v] of Object.entries(totalTaken)) {
               const gets = Math.max(0, Math.floor(v * 0.6));
-              const loses = v - gets;
               if (gets > 0) raiderGets[r] = gets;
-              if (loses > 0) lost[r] = loses;
+              if (v-gets > 0) lost[r] = v-gets;
             }
             let victimRes = {...victim.resources};
             let raiderRes = {...resolved[i].resources};
@@ -1041,49 +1149,58 @@
             resolved[target] = {...victim, resources: victimRes};
             resolved[i] = {...resolved[i], resources: raiderRes, pendingRaeuber: null};
             const takenStr = Object.entries(totalTaken).map(([r,v])=>v+RES_ICONS[r]).join(" ");
-            const getsStr  = Object.entries(raiderGets).map(([r,v])=>v+RES_ICONS[r]).join(" ") || "nichts";
-            const lostStr  = Object.entries(lost).map(([r,v])=>v+RES_ICONS[r]).join(" ") || "nichts";
-            raidLogs.push("🗡️ "+p.name+" überfällt "+victim.name+"! Nimmt "+takenStr+" — bekommt "+getsStr+", "+lostStr+" verschwinden");
+            const getsStr = Object.entries(raiderGets).map(([r,v])=>v+RES_ICONS[r]).join(" ") || "nichts";
+            raidLogs.push("🗡️ "+p.name+" überfällt "+resolved[target].name+"! Nimmt "+takenStr+", bekommt "+getsStr);
           });
-          // Clear pending raiders that found no victims
           resolved = resolved.map(p => ({...p, pendingRaeuber: null}));
 
-          // Finanzamt — pro Spieler eigene Chance basierend auf Reichtum: min(75%, (total-14)*3%)
-          resolved.forEach((p, vi) => {
-            const total = RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0);
-            if (total < FINANZAMT_MIN_VERMOEGEN) return;
-            const chance = Math.min(0.75, (total - 14) * 0.03);
-            if (Math.random() > chance) return;
-            const newRes = {...p.resources};
-            let lost = {};
-            for (const r of RESOURCES) {
-              if ((newRes[r]||0) <= 0) continue;
-              const lose = Math.ceil((newRes[r]||0) * (0.35 + Math.random()*0.25));
-              if (lose > 0) { lost[r] = lose; newRes[r] = Math.max(0, newRes[r]-lose); }
-            }
-            if (Object.keys(lost).length > 0) {
-              const lostStr = Object.entries(lost).map(([r,v])=>v+RES_ICONS[r]).join(" ");
-              raidLogs.push("🏛️ FINANZAMT prüft "+p.name+"! Verliert "+lostStr+" — Steuern fällig!");
-              resolved[vi] = {...p, resources: newRes};
-            }
-          });
+          // Finanzamt — pro Spieler eigene Chance, Burg schützt, Frieden-Event überspringt
+          if (!activeEvent?.skipFinanzamt) {
+            resolved.forEach((p, vi) => {
+              const total = RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0);
+              if (total < FINANZAMT_MIN_VERMOEGEN) return;
+              const burgLvl = p.buildings?.burg || 0;
+              const protection = burgLvl >= 3 ? 1.0 : burgLvl === 2 ? 0.65 : burgLvl === 1 ? 0.5 : 0;
+              const chance = Math.min(0.75, (total - 14) * 0.03) * (1 - protection);
+              if (Math.random() > chance) return;
+              const newRes = {...p.resources};
+              let lost = {};
+              for (const r of RESOURCES) {
+                if ((newRes[r]||0) <= 0) continue;
+                const lose = Math.ceil((newRes[r]||0) * (0.35 + Math.random()*0.25));
+                if (lose > 0) { lost[r] = lose; newRes[r] = Math.max(0, newRes[r]-lose); }
+              }
+              if (Object.keys(lost).length > 0) {
+                const lostStr = Object.entries(lost).map(([r,v])=>v+RES_ICONS[r]).join(" ");
+                const schutz = burgLvl > 0 ? " (Burg: "+Math.round(protection*100)+"% Schutz hatte nicht gereicht)" : "";
+                raidLogs.push("🏛️ FINANZAMT prüft "+p.name+"! Verliert "+lostStr+schutz);
+                resolved[vi] = {...p, resources: newRes};
+              }
+            });
+          } else {
+            raidLogs.push("🕊️ Frieden schützt vor dem Finanzamt diese Runde!");
+          }
 
-          // Check for winner
+          // Check winner
           const winVP = getWinVP(freshGs);
           let winner = null;
           for (let i = 0; i < resolved.length; i++) {
             if (calcVP(resolved[i]) >= winVP) { winner = i; break; }
           }
 
+          const vpAfter = resolved.map(p => ({name:p.name, color:p.color, vp:calcVP(p)}));
+          summaryData = { round: gs.round, event: activeEvent?.label ? activeEvent : null, vpBefore, vpAfter, raidLogs: [...raidLogs] };
+
           const newRound = gs.round + 1;
           const incLogs = resolved.map(p => p.name+": "+incSummary(p, gMode)).join(" | ");
-          g = {...g, players: resolved, round: newRound, phase: winner!==null?"finished":"playing", winner};
+          g = {...g, players: resolved, round: newRound, phase: winner!==null?"finished":"playing", winner, alliances: activeAlliances, allianceOffers: freshGs.allianceOffers||[]};
           g = addLog(g, "🔔 Runde "+gs.round+" abgeschlossen! Einnahmen: "+incLogs);
           for (const rl of raidLogs) g = addLog(g, rl);
           if (winner !== null) g = addLog(g, "🏆 "+resolved[winner].name+" gewinnt mit "+calcVP(resolved[winner])+" VP (Ziel: "+winVP+")!");
         }
 
         await push(g);
+        if (summaryData) setRoundSummary(summaryData);
       }
 
       // Chat
@@ -1283,6 +1400,39 @@
         );
       }
 
+      // SPECTATOR VIEW
+      if (isSpectator && gs && gs.players) return (
+        <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d1117,#131825)",padding:16,position:"relative"}}>
+          <StarField/>
+          <div style={{position:"relative",zIndex:1,maxWidth:500,margin:"0 auto"}}>
+            <div style={{textAlign:"center",marginBottom:16}}>
+              <span style={{background:"#9b59b6",borderRadius:8,padding:"4px 12px",color:"#fff",fontSize:12,fontWeight:700}}>👁 ZUSCHAUER</span>
+              <div style={{color:"#f4a261",fontWeight:800,fontSize:16,marginTop:8}}>Runde {gs.round} · {roomCode}</div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {gs.players.map((p,i)=>(
+                <div key={i} style={{background:"#252a3a",borderRadius:12,padding:12,border:"1px solid #2e2e2e"}}>
+                  <div style={{color:p.color,fontWeight:800,fontSize:14,marginBottom:6}}>{p.name} · {calcVP(p)} VP</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4}}>
+                    {RESOURCES.map(r=><div key={r} style={{color:"#aaa",fontSize:12}}>{RES_ICONS[r]} {p.resources[r]||0}</div>)}
+                  </div>
+                  <div style={{marginTop:6,display:"flex",gap:4,flexWrap:"wrap"}}>
+                    {BUILDINGS.filter(b=>(p.buildings[b.id]||0)>0).map(b=><span key={b.id} style={{fontSize:16}}>{b.icon}</span>)}
+                  </div>
+                  <div style={{marginTop:4,height:3,background:"#333",borderRadius:2}}>
+                    <div style={{height:"100%",width:Math.min(100,calcVP(p)/getWinVP(gs)*100)+"%",background:p.color,borderRadius:2}}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:"#252a3a",borderRadius:10,padding:"8px 12px",marginTop:12,maxHeight:120,overflowY:"auto"}}>
+              {(gs.log||[]).map((l,i)=><div key={i} style={{color:i===0?"#bbb":"#555",fontSize:12,padding:"2px 0"}}>{l}</div>)}
+            </div>
+            <button onClick={()=>{setIsSpectator(false);setScreen("home");setGs(null);}} style={{width:"100%",background:"#333",border:"none",borderRadius:10,color:"#aaa",padding:12,marginTop:12,cursor:"pointer",fontWeight:700}}>Verlassen</button>
+          </div>
+        </div>
+      );
+
       // GAME
       if (!gs||!gs.players||myIndex===null||!me) return (
         <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1394,6 +1544,21 @@
               </div>
             )}
 
+            {/* Round summary modal */}
+            <RoundSummaryModal summary={roundSummary} onClose={()=>setRoundSummary(null)}/>
+
+            {/* Alliance offers for me */}
+            {(gs.allianceOffers||[]).filter(o=>o.to===myIndex).map((offer,i)=>(
+              <div key={i} style={{position:"fixed",bottom:80,right:280,zIndex:350,background:"#1b1f2e",border:"2px solid #9b59b6",borderRadius:12,padding:"12px 14px",maxWidth:240,boxShadow:"0 6px 20px rgba(0,0,0,0.5)"}}>
+                <div style={{color:"#9b59b6",fontWeight:800,fontSize:13,marginBottom:6}}>🤝 Allianz-Angebot</div>
+                <div style={{color:"#bbb",fontSize:12,marginBottom:10}}>{gs.players[offer.from]?.name} möchte 3 Runden Waffenstillstand</div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>acceptAlliance(offer)} style={{flex:1,background:"#9b59b6",border:"none",borderRadius:7,color:"#fff",padding:"6px 0",fontWeight:700,fontSize:12,cursor:"pointer"}}>Annehmen</button>
+                  <button onClick={()=>declineAlliance(offer)} style={{flex:1,background:"#333",border:"none",borderRadius:7,color:"#aaa",padding:"6px 0",fontSize:12,cursor:"pointer"}}>Ablehnen</button>
+                </div>
+              </div>
+            ))}
+
             {/* Menu overlay to close on outside click */}
             {menuOpen && (
               <div onClick={()=>setMenuOpen(false)}
@@ -1499,7 +1664,24 @@
                 {/* Player trade */}
                 {panel==="player"&&(
                   <div style={{background:"#1b1f2e",borderRadius:10,padding:12,marginTop:10}}>
-                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>Angebot an wen? (wird sofort reserviert)</div>
+                    {/* Alliance status */}
+                    <div style={{marginBottom:10}}>
+                      <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:6}}>ALLIANZEN</div>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                        {gs.players.map((p,i)=>{ if(i===myIndex) return null;
+                          const allied = isAllied(myIndex,i);
+                          const offered = (gs.allianceOffers||[]).find(o=>o.from===myIndex&&o.to===i);
+                          const theyOffer = (gs.allianceOffers||[]).find(o=>o.from===i&&o.to===myIndex);
+                          return (
+                            <button key={i} onClick={()=>!allied&&!offered&&!me.ready&&proposeAlliance(i)}
+                              style={{background:allied?"#1a2a1a":offered?"#1a1a2a":"#252a3a",border:"1px solid "+(allied?"#2a9d8f":offered?"#9b59b6":"#333"),borderRadius:7,color:allied?"#2a9d8f":offered?"#9b59b6":"#aaa",padding:"5px 9px",fontSize:11,cursor:allied||offered||me.ready?"default":"pointer"}}>
+                              {allied?"🤝 "+p.name+" (Verbündet)":offered?"⏳ "+p.name+" (angefragt)":theyOffer?"💌 "+p.name+" (wartet)":"🤝 "+p.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>Handelsangebot an wen?</div>
                     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
                       {gs.players.map((p,i)=>i!==myIndex&&(
                         <button key={i} onClick={()=>setPtTarget(i)}
