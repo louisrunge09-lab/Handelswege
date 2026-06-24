@@ -1926,70 +1926,89 @@
         const ranked = (gs.players||[]).map((p,i)=>({...p,vp:calcVP(p),idx:i})).sort((a,b)=>b.vp-a.vp);
         const st = gs.stats || {};
         const medals = ["🥇","🥈","🥉","4.","5.","6.","7.","8.","9.","10."];
-        // Fun facts
+        const winner = ranked[0];
+        const maxVP = winner.vp || 1;
         const mostBuilt = gs.players.reduce((best,p,i)=>(st.buildsTotal[i]||0)>(st.buildsTotal[best]||0)?i:best,0);
         const mostHit   = gs.players.reduce((best,p,i)=>(st.raidsReceived[i]||0)>(st.raidsReceived[best]||0)?i:best,0);
         const mostLed   = gs.players.reduce((best,p,i)=>(st.roundsLed[i]||0)>(st.roundsLed[best]||0)?i:best,0);
+        const modeLabel = (MODES[gs.gameMode]||MODES.normal).label;
         return (
-          <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d1117,#131825)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d1117 0%,#111624 55%,#0d1117 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,position:"relative"}}>
             <StarField/>
-            <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:1}}>
-              <div style={{textAlign:"center",marginBottom:20}}>
-                <div style={{fontSize:56,marginBottom:6}}>🏆</div>
-                <h2 style={{color:"#f4a261",fontSize:26,fontWeight:900,marginBottom:2}}>{ranked[0].name} gewinnt!</h2>
-                <p style={{color:"#555",fontSize:13}}>Runde {gs.round-1} · {ranked[0].vp} VP · {gs.gameMode}</p>
+            <div style={{width:"100%",maxWidth:440,position:"relative",zIndex:1}}>
+
+              {/* Victory header */}
+              <div className="bounce-in" style={{textAlign:"center",marginBottom:24}}>
+                <div style={{fontSize:64,marginBottom:8,filter:"drop-shadow(0 0 20px rgba(233,196,106,0.5))"}}>🏆</div>
+                <div style={{color:"#3a4060",fontSize:10,letterSpacing:2,fontWeight:700,marginBottom:6,textTransform:"uppercase"}}>Handelswege · {modeLabel}</div>
+                <h2 style={{color:"#f4a261",fontSize:28,fontWeight:900,marginBottom:4,lineHeight:1.1}}>{winner.name} gewinnt!</h2>
+                <p style={{color:"#607088",fontSize:13}}>Runde {gs.round-1} · {winner.vp} Siegpunkte</p>
               </div>
 
-              {/* Rangliste */}
-              <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:12}}>
-                <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:10}}>RANGLISTE</div>
-                {ranked.map((p,rank)=>(
-                  <div key={p.idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:rank<ranked.length-1?"1px solid #1e2230":"none"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontSize:16}}>{medals[rank]||rank+1+"."}</span>
-                      <div style={{width:8,height:8,borderRadius:"50%",background:p.color}}/>
-                      <span style={{color:"#fff",fontWeight:600,fontSize:14}}>{p.name}</span>
+              {/* Rangliste mit VP-Balken */}
+              <div style={{background:"linear-gradient(160deg,#1a1e30,#141828)",border:"1px solid #252b3d",borderRadius:16,padding:"16px 16px",marginBottom:12}}>
+                <div style={{color:"#3a4060",fontSize:10,letterSpacing:1.5,fontWeight:700,marginBottom:12}}>ENDSTAND</div>
+                {ranked.map((p,rank)=>{
+                  const pct = Math.min(100, p.vp / maxVP * 100);
+                  const isWinner = rank===0;
+                  return (
+                    <div key={p.idx} style={{marginBottom:rank<ranked.length-1?12:0}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:18,minWidth:22}}>{medals[rank]||rank+1+"."}</span>
+                          <div style={{width:isWinner?28:22,height:isWinner?28:22,borderRadius:"50%",background:p.color,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:900,fontSize:isWinner?12:10,flexShrink:0,boxShadow:isWinner?`0 0 12px ${p.color}88`:"none"}}>
+                            {p.name[0].toUpperCase()}
+                          </div>
+                          <span style={{color:isWinner?"#fff":"#c8d0e8",fontWeight:isWinner?800:600,fontSize:isWinner?15:13}}>{p.name}</span>
+                        </div>
+                        <span style={{color:p.color,fontWeight:900,fontSize:isWinner?20:16}}>{p.vp} <span style={{fontSize:11,fontWeight:600,color:"#3a4060"}}>VP</span></span>
+                      </div>
+                      <div style={{height:isWinner?5:3,background:"#1c2030",borderRadius:3,overflow:"hidden"}}>
+                        <div className="vp-bar-fill" style={{height:"100%",width:pct+"%",background:`linear-gradient(90deg,${p.color}88,${p.color})`,borderRadius:3,boxShadow:isWinner?`0 0 8px ${p.color}66`:""}}/>
+                      </div>
                     </div>
-                    <span style={{color:p.color,fontWeight:900,fontSize:18}}>{p.vp} VP</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Statistiken */}
-              <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:12}}>
-                <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:10}}>STATISTIKEN</div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat("+Math.min(gs.players.length,4)+",1fr)",gap:6,marginBottom:10}}>
+              <div style={{background:"linear-gradient(160deg,#1a1e30,#141828)",border:"1px solid #252b3d",borderRadius:16,padding:"16px 16px",marginBottom:12}}>
+                <div style={{color:"#3a4060",fontSize:10,letterSpacing:1.5,fontWeight:700,marginBottom:12}}>SPIELERSTATISTIKEN</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat("+Math.min(gs.players.length,4)+",1fr)",gap:6,marginBottom:12}}>
                   {gs.players.map((p,i)=>(
-                    <div key={i} style={{background:"#1b1f2e",borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
-                      <div style={{color:p.color,fontWeight:800,fontSize:11,marginBottom:6}}>{p.name.length>7?p.name.slice(0,7)+"…":p.name}</div>
-                      <div style={{color:"#aaa",fontSize:10,marginBottom:2}}>🏗 {st.buildsTotal?.[i]||0} Gebäude</div>
-                      <div style={{color:"#aaa",fontSize:10,marginBottom:2}}>⚔️ {st.raidsReceived?.[i]||0} Treffer</div>
-                      <div style={{color:"#aaa",fontSize:10,marginBottom:2}}>👑 {st.roundsLed?.[i]||0} Runden</div>
-                      <div style={{color:"#aaa",fontSize:10}}>🔬 {st.techsBought?.[i]||0} Techs</div>
+                    <div key={i} style={{background:"rgba(0,0,0,0.2)",border:"1px solid #1e2235",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+                      <div style={{width:20,height:20,borderRadius:"50%",background:p.color,margin:"0 auto 6px",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:9,fontWeight:900}}>{p.name[0].toUpperCase()}</div>
+                      <div style={{color:p.color,fontWeight:800,fontSize:10,marginBottom:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name.length>7?p.name.slice(0,7)+"…":p.name}</div>
+                      <div style={{color:"#8090a8",fontSize:10,marginBottom:3}}>🏗 {st.buildsTotal?.[i]||0}</div>
+                      <div style={{color:"#8090a8",fontSize:10,marginBottom:3}}>⚔️ {st.raidsReceived?.[i]||0}</div>
+                      <div style={{color:"#8090a8",fontSize:10,marginBottom:3}}>👑 {st.roundsLed?.[i]||0}</div>
+                      <div style={{color:"#8090a8",fontSize:10}}>🔬 {st.techsBought?.[i]||0}</div>
                     </div>
                   ))}
                 </div>
-                <div style={{borderTop:"1px solid #1e2230",paddingTop:10,display:"flex",flexDirection:"column",gap:4}}>
+                <div style={{borderTop:"1px solid #1e2235",paddingTop:10,display:"flex",flexDirection:"column",gap:5}}>
                   {(st.buildsTotal?.[mostBuilt]||0)>0&&<div style={{color:"#f4a261",fontSize:12}}>🏗 Meiste Gebäude: <b>{gs.players[mostBuilt]?.name}</b> ({st.buildsTotal[mostBuilt]})</div>}
                   {(st.raidsReceived?.[mostHit]||0)>0&&<div style={{color:"#e76f51",fontSize:12}}>⚔️ Meist überfallen: <b>{gs.players[mostHit]?.name}</b> ({st.raidsReceived[mostHit]}×)</div>}
                   {(st.roundsLed?.[mostLed]||0)>0&&<div style={{color:"#e9c46a",fontSize:12}}>👑 Längste Führung: <b>{gs.players[mostLed]?.name}</b> ({st.roundsLed[mostLed]} Runden)</div>}
                 </div>
               </div>
 
-              {/* Finale Gebäude */}
-              <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
-                <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:8}}>FINALE DÖRFER</div>
+              {/* Finale Dörfer */}
+              <div style={{background:"linear-gradient(160deg,#1a1e30,#141828)",border:"1px solid #252b3d",borderRadius:16,padding:"16px 16px",marginBottom:16}}>
+                <div style={{color:"#3a4060",fontSize:10,letterSpacing:1.5,fontWeight:700,marginBottom:10}}>FINALE DÖRFER</div>
                 {gs.players.map((p,i)=>(
-                  <div key={i} style={{marginBottom:6,display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{color:p.color,fontSize:11,fontWeight:700,minWidth:60}}>{p.name.length>7?p.name.slice(0,7)+"…":p.name}</span>
-                    <span style={{fontSize:18}}>{BUILDINGS.filter(b=>(p.buildings[b.id]||0)>0).map(b=>b.icon+(p.buildings[b.id]>1?""+p.buildings[b.id]:"")).join(" ")||"—"}</span>
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:i<gs.players.length-1?"1px solid #1e2235":"none"}}>
+                    <div style={{width:8,height:8,borderRadius:"50%",background:p.color,flexShrink:0}}/>
+                    <span style={{color:"#8090a8",fontSize:11,fontWeight:700,minWidth:55}}>{p.name.length>7?p.name.slice(0,7)+"…":p.name}</span>
+                    <span style={{fontSize:18,lineHeight:1,letterSpacing:2}}>{BUILDINGS.filter(b=>(p.buildings[b.id]||0)>0).map(b=>b.icon+(p.buildings[b.id]>1?""+p.buildings[b.id]:"")).join(" ")||<span style={{color:"#2a2e42",fontSize:11}}>keine Gebäude</span>}</span>
                   </div>
                 ))}
               </div>
 
               <button onClick={()=>{clearSession();setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");setJoinCode("");setError("");setIsSolo(false);}}
-                style={{width:"100%",background:"linear-gradient(135deg,#f4a261,#e76f51)",border:"none",borderRadius:12,color:"#1b1f2e",padding:14,fontSize:16,fontWeight:900,cursor:"pointer"}}>
-                Zurück zum Menü
+                className="cta-orange"
+                style={{width:"100%",background:"linear-gradient(135deg,#f4a261,#e76f51)",border:"none",borderRadius:12,color:"#1b1f2e",padding:"15px 0",fontSize:16,fontWeight:900,cursor:"pointer"}}>
+                🏠 Zurück zum Menü
               </button>
             </div>
           </div>
