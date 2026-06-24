@@ -222,6 +222,7 @@
       const [gs, setGs] = useState(null);
       const [error, setError] = useState("");
       const [loading, setLoading] = useState(false);
+      const [feedback, setFeedback] = useState(""); // success/info feedback
 
       // Local UI
       const [panel, setPanel] = useState(null);
@@ -245,13 +246,28 @@
           try {
             const {code, idx, name} = JSON.parse(saved);
             sb.current.getRoom(code).then(room => {
-              if (room && room.state && room.state.players && room.state.players[idx] && room.state.players[idx].name === name) {
-                codeRef.current = code;
-                setRoomCode(code); setMyIndex(idx); setMyName(name); setIsHost(idx===0);
-                setGs(room.state);
-                setScreen(room.state.phase === "lobby" ? "lobby" : "game");
-                subscribe(code);
-              } else { localStorage.removeItem("handelswege_session"); }
+              if (!room || !room.state) {
+                localStorage.removeItem("handelswege_session");
+                return;
+              }
+              const state = room.state;
+              // Find player by name in case index shifted (e.g. someone was kicked)
+              const foundIdx = state.players ? state.players.findIndex(p => p.name === name) : -1;
+              if (foundIdx === -1) {
+                localStorage.removeItem("handelswege_session");
+                return;
+              }
+              codeRef.current = code;
+              setRoomCode(code);
+              setMyIndex(foundIdx);
+              setMyName(name);
+              setIsHost(foundIdx === 0);
+              setGs(state);
+              if (state.phase === "lobby") setScreen("lobby");
+              else if (state.phase === "playing" || state.phase === "finished") setScreen("game");
+              subscribe(code);
+              // Update saved index in case it changed
+              saveSession(code, foundIdx, name);
             });
           } catch(e) { localStorage.removeItem("handelswege_session"); }
         }
@@ -261,6 +277,23 @@
       useEffect(() => {
         if (screen === "lobby" && gs && gs.phase === "playing") setScreen("game");
       }, [gs && gs.phase]);
+
+      // Keep myIndex in sync with myName whenever players list changes
+      useEffect(() => {
+        if (!gs || !gs.players || !myName) return;
+        const idx = gs.players.findIndex(p => p.name === myName);
+        if (idx === -1) {
+          // We got kicked — go back to home
+          clearSession();
+          setScreen("home"); setGs(null); setMyIndex(null); setIsHost(false); setRoomCode("");
+          return;
+        }
+        if (idx !== myIndex) {
+          setMyIndex(idx);
+          setIsHost(idx === 0);
+          if (codeRef.current) saveSession(codeRef.current, idx, myName);
+        }
+      }, [gs && gs.players && gs.players.map(p=>p.name).join(",")]);
 
       // Auto-scroll chat
       useEffect(() => {
@@ -285,34 +318,49 @@
 
       // ── LOBBY ──────────────────────────────────────────────────────────────
       async function createRoom() {
-        if (!myName.trim()) { setError("Bitte Namen eingeben"); return; }
-        setLoading(true); setError("");
-        const code = generateRoomCode();
-        const lobby = { phase:"lobby", players:[{name:myName.trim(), color:PLAYER_COLORS[0]}], log:[], chat:[], tradeOffers:[], winner:null };
-        await sb.current.createRoom(code, lobby);
-        codeRef.current = code;
-        setRoomCode(code); setMyIndex(0); setIsHost(true); setGs(lobby);
-        saveSession(code, 0, myName.trim());
-        subscribe(code); setScreen("lobby"); setLoading(false);
+        if (!myName.trim()) { setError("Bitte Namen eingeben"); setFeedback(""); return; }
+        setLoading(true); setError(""); setFeedback("Raum wird erstellt…");
+        try {
+          const code = generateRoomCode();
+          const lobby = { phase:"lobby", players:[{name:myName.trim(), color:PLAYER_COLORS[0]}], log:[], chat:[], tradeOffers:[], winner:null };
+          await sb.current.createRoom(code, lobby);
+          codeRef.current = code;
+          setRoomCode(code); setMyIndex(0); setIsHost(true); setGs(lobby);
+          saveSession(code, 0, myName.trim());
+          setFeedback("✅ Raum erstellt! Code: "+code);
+          subscribe(code); setScreen("lobby");
+        } catch(e) {
+          setError("Fehler beim Erstellen. Bitte nochmal versuchen.");
+          setFeedback("");
+        }
+        setLoading(false);
       }
 
       async function joinRoom() {
-        if (!myName.trim()) { setError("Bitte Namen eingeben"); return; }
-        if (!joinCode.trim()) { setError("Bitte Code eingeben"); return; }
-        setLoading(true); setError("");
-        const code = joinCode.trim().toUpperCase();
-        const room = await sb.current.getRoom(code);
-        if (!room) { setError("Raum nicht gefunden"); setLoading(false); return; }
-        if (room.state.phase !== "lobby") { setError("Spiel läuft bereits"); setLoading(false); return; }
-        if (room.state.players.length >= 4) { setError("Raum voll"); setLoading(false); return; }
-        const idx = room.state.players.length;
-        const newPs = [...room.state.players, {name:myName.trim(), color:PLAYER_COLORS[idx]}];
-        const newGs = {...room.state, players:newPs};
-        codeRef.current = code;
-        setRoomCode(code); setMyIndex(idx); setIsHost(false);
-        await sb.current.updateRoom(code, newGs);
-        saveSession(code, idx, myName.trim());
-        setGs(newGs); subscribe(code); setScreen("lobby"); setLoading(false);
+        if (!myName.trim()) { setError("Bitte Namen eingeben"); setFeedback(""); return; }
+        if (!joinCode.trim()) { setError("Bitte Raum-Code eingeben"); setFeedback(""); return; }
+        if (joinCode.trim().length !== 4) { setError("Code muss 4 Zeichen lang sein"); return; }
+        setLoading(true); setError(""); setFeedback("Suche Raum "+joinCode.trim().toUpperCase()+"…");
+        try {
+          const code = joinCode.trim().toUpperCase();
+          const room = await sb.current.getRoom(code);
+          if (!room) { setError("❌ Raum ""+code+"" nicht gefunden"); setFeedback(""); setLoading(false); return; }
+          if (room.state.phase !== "lobby") { setError("⏳ Spiel in Raum "+code+" läuft bereits"); setFeedback(""); setLoading(false); return; }
+          if (room.state.players.length >= 4) { setError("🚫 Raum "+code+" ist voll (4/4)"); setFeedback(""); setLoading(false); return; }
+          const idx = room.state.players.length;
+          const newPs = [...room.state.players, {name:myName.trim(), color:PLAYER_COLORS[idx]}];
+          const newGs = {...room.state, players:newPs};
+          codeRef.current = code;
+          setRoomCode(code); setMyIndex(idx); setIsHost(false);
+          await sb.current.updateRoom(code, newGs);
+          saveSession(code, idx, myName.trim());
+          setFeedback("✅ Beigetreten! "+room.state.players.map(p=>p.name).join(", ")+" sind schon drin.");
+          setGs(newGs); subscribe(code); setScreen("lobby");
+        } catch(e) {
+          setError("Verbindungsfehler. Bitte nochmal versuchen.");
+          setFeedback("");
+        }
+        setLoading(false);
       }
 
       async function startGame() {
@@ -673,7 +721,7 @@
             <p style={{color:"#555",textAlign:"center",marginBottom:28,fontSize:13}}>Alle spielen gleichzeitig · 2–4 Spieler</p>
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:14}}>
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>DEIN NAME</div>
-              <input style={ipt} value={myName} onChange={e=>setMyName(e.target.value)} placeholder="Name eingeben…" maxLength={16}/>
+              <input style={ipt} value={myName} onChange={e=>{setMyName(e.target.value);setError("");setFeedback("");}} placeholder="Name eingeben…" maxLength={16}/>
             </div>
             <button onClick={createRoom} disabled={loading} style={{width:"100%",background:"#f4a261",border:"none",borderRadius:12,color:"#1b1f2e",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:12}}>
               🏠 Neuen Raum erstellen
@@ -681,13 +729,21 @@
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px"}}>
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>RAUM BEITRETEN</div>
               <input style={{...ipt,textTransform:"uppercase",letterSpacing:4,textAlign:"center",fontSize:22,fontWeight:700,marginBottom:10}}
-                value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={4}/>
+                value={joinCode} onChange={e=>{setJoinCode(e.target.value.toUpperCase());setError("");setFeedback("");}} placeholder="CODE" maxLength={4}/>
               <button onClick={joinRoom} disabled={loading} style={{width:"100%",background:"#457b9d",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer"}}>
                 Beitreten
               </button>
             </div>
-            {error && <div style={{color:"#e76f51",textAlign:"center",fontSize:13,marginTop:12}}>{error}</div>}
-            {loading && <div style={{color:"#666",textAlign:"center",fontSize:13,marginTop:8}}>Verbinde…</div>}
+            {error && (
+              <div style={{background:"#2a1010",border:"1px solid #e76f51",borderRadius:10,padding:"10px 14px",marginTop:12,textAlign:"center",color:"#e76f51",fontSize:13}}>
+                {error}
+              </div>
+            )}
+            {feedback && !error && (
+              <div style={{background:"#0e2a1a",border:"1px solid #2a9d8f",borderRadius:10,padding:"10px 14px",marginTop:12,textAlign:"center",color:"#2a9d8f",fontSize:13}}>
+                {feedback}
+              </div>
+            )}
           </div>
         </div>
       );
