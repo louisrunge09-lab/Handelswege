@@ -7,6 +7,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0d1117; font-family: system-ui, sans-serif; }
@@ -100,6 +101,7 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #2e3448; border-radius: 4px; }
+    img.emoji { height:1.1em; width:1.1em; vertical-align:-0.15em; display:inline-block; }
   </style>
 </head>
 <body>
@@ -604,6 +606,13 @@
           if (codeRef.current) saveSession(codeRef.current, idx, myName);
         }
       }, [gs && gs.players && gs.players.map(p=>p.name).join(",")]);
+
+      // Twemoji: nach jedem Render Emojis als SVG rendern
+      useEffect(() => {
+        if (typeof twemoji !== "undefined") {
+          twemoji.parse(document.getElementById("root"), { folder:"svg", ext:".svg" });
+        }
+      });
 
       // Auto-scroll chat
       useEffect(() => {
