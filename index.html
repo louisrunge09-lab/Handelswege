@@ -1048,38 +1048,25 @@
           // Clear pending raiders that found no victims
           resolved = resolved.map(p => ({...p, pendingRaeuber: null}));
 
-          // Finanzamt — 25% Chance pro Runde, prüft EINEN zufälligen, wohlhabenden Spieler (höhere Schwelle als früher)
-          if (Math.random() < 0.25) {
-            // Nur Spieler mit hohem Gesamtvermögen sind Ziele (Schwelle angehoben)
-            const eligible = resolved.map((p,i) => ({
-              i, total: RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0)
-            })).filter(x => x.total >= FINANZAMT_MIN_VERMOEGEN);
-
-            if (eligible.length > 0) {
-              // Pick one random victim (weighted by wealth)
-              const totalWeight = eligible.reduce((s,x)=>s+x.total, 0);
-              let pick = Math.random() * totalWeight;
-              let victim = eligible[0];
-              for (const e of eligible) {
-                pick -= e.total;
-                if (pick <= 0) { victim = e; break; }
-              }
-
-              const p = resolved[victim.i];
-              const newRes = {...p.resources};
-              let lost = {};
-              for (const r of RESOURCES) {
-                if ((newRes[r]||0) <= 0) continue;
-                const lose = Math.ceil((newRes[r]||0) * (0.4 + Math.random()*0.3));
-                if (lose > 0) { lost[r] = lose; newRes[r] = Math.max(0, newRes[r]-lose); }
-              }
-              if (Object.keys(lost).length > 0) {
-                const lostStr = Object.entries(lost).map(([r,v])=>v+RES_ICONS[r]).join(" ");
-                raidLogs.push("🏛️ FINANZAMT prüft "+p.name+"! Verliert "+lostStr+" — Steuern fällig!");
-                resolved[victim.i] = {...p, resources: newRes};
-              }
+          // Finanzamt — pro Spieler eigene Chance basierend auf Reichtum: min(75%, (total-14)*3%)
+          resolved.forEach((p, vi) => {
+            const total = RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0);
+            if (total < FINANZAMT_MIN_VERMOEGEN) return;
+            const chance = Math.min(0.75, (total - 14) * 0.03);
+            if (Math.random() > chance) return;
+            const newRes = {...p.resources};
+            let lost = {};
+            for (const r of RESOURCES) {
+              if ((newRes[r]||0) <= 0) continue;
+              const lose = Math.ceil((newRes[r]||0) * (0.35 + Math.random()*0.25));
+              if (lose > 0) { lost[r] = lose; newRes[r] = Math.max(0, newRes[r]-lose); }
             }
-          }
+            if (Object.keys(lost).length > 0) {
+              const lostStr = Object.entries(lost).map(([r,v])=>v+RES_ICONS[r]).join(" ");
+              raidLogs.push("🏛️ FINANZAMT prüft "+p.name+"! Verliert "+lostStr+" — Steuern fällig!");
+              resolved[vi] = {...p, resources: newRes};
+            }
+          });
 
           // Check for winner
           const winVP = getWinVP(freshGs);
