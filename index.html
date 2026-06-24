@@ -118,7 +118,7 @@
     const RES_ICONS = { Holz: "🪵", Stein: "🪨", Getreide: "🌾", Gold: "🪙" };
     const MODES = {
       schnell: { label: "⚡ Schnell", winVP: 30,  resMulti: 1.8, incMulti: 1.6, costMulti: 0.75, desc: "30 VP · Mehr Ressourcen" },
-      normal:  { label: "🏆 Normal",  winVP: 100, resMulti: 1.0, incMulti: 1.0, costMulti: 1.0,  desc: "100 VP · Standard" },
+      normal:  { label: "🏆 Normal",  winVP: 50,  resMulti: 1.0, incMulti: 1.0, costMulti: 1.0,  desc: "50 VP · Standard" },
       hard:    { label: "💀 Hard",    winVP: 100, resMulti: 0.5, incMulti: 0.7, costMulti: 1.4,  desc: "100 VP · Teuer & wenig Res." },
     };
     function getWinVP(gs) { return (MODES[gs?.gameMode] || MODES.normal).winVP; }
