@@ -1468,8 +1468,8 @@
       }
 
       async function setGameMode(mode) {
-        if (!isHost || !gs || gs.gameMode === mode) return;
-        await push({...gs, gameMode: mode});
+        if (!isHost || !gs) return;
+        await push({...gs, gameMode: mode, customVP: (MODES[mode]||MODES.normal).winVP});
       }
 
       async function leaveRoom() {
@@ -1883,18 +1883,36 @@
             {/* Spielmodus */}
             <div style={{background:"linear-gradient(160deg,#1a1e30,#141828)",border:"1px solid #252b3d",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
               <div style={{color:"#3a4060",fontSize:10,letterSpacing:1.5,fontWeight:700,marginBottom:10}}>SPIELMODUS {!isHost&&<span style={{color:"#2a2e42",fontWeight:400}}>· nur Host kann ändern</span>}</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
                 {Object.entries(MODES).map(([id,m])=>{
-                  const active = (gs?.gameMode||"schnell")===id;
+                  const currentVP = gs?.customVP || (MODES[gs?.gameMode||"schnell"]||MODES.normal).winVP;
+                  const active = (gs?.gameMode||"schnell")===id && currentVP===m.winVP;
+                  const modeSelected = (gs?.gameMode||"schnell")===id;
                   return (
                     <button key={id} onClick={()=>setGameMode(id)} disabled={!isHost} className={isHost?"mode-btn":""}
-                      style={{background:active?"rgba(42,157,143,0.12)":"#13172280",border:"2px solid "+(active?"#2a9d8f":"#1e2235"),borderRadius:10,padding:"10px 4px 8px",cursor:isHost?"pointer":"default",textAlign:"center"}}>
+                      style={{background:active?"rgba(42,157,143,0.12)":modeSelected?"rgba(42,157,143,0.04)":"#13172280",border:"2px solid "+(active?"#2a9d8f":modeSelected?"#1e3530":"#1e2235"),borderRadius:10,padding:"10px 4px 8px",cursor:isHost?"pointer":"default",textAlign:"center"}}>
                       <div style={{fontSize:16,marginBottom:2}}>{m.label.split(" ")[0]}</div>
-                      <div style={{color:"#c8d0e8",fontWeight:700,fontSize:11,marginBottom:2}}>{m.label.split(" ").slice(1).join(" ")}</div>
-                      <div style={{color:active?"#2a9d8f":"#2a2e42",fontSize:10,fontWeight:600}}>{m.winVP} VP</div>
+                      <div style={{color:modeSelected?"#c8d0e8":"#4a5070",fontWeight:700,fontSize:11,marginBottom:2}}>{m.label.split(" ").slice(1).join(" ")}</div>
+                      <div style={{color:active?"#2a9d8f":modeSelected?"#1e3530":"#2a2e42",fontSize:10,fontWeight:600}}>{m.desc}</div>
                     </button>
                   );
                 })}
+              </div>
+              {/* VP Slider */}
+              <div style={{background:"#13172280",borderRadius:10,padding:"10px 12px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <span style={{color:"#3a4060",fontSize:11,fontWeight:600,letterSpacing:1}}>SIEGPUNKTE-ZIEL</span>
+                  <span style={{color:"#2a9d8f",fontSize:18,fontWeight:900,lineHeight:1}}>{gs?.customVP || (MODES[gs?.gameMode||"schnell"]||MODES.normal).winVP} <span style={{fontSize:11,fontWeight:600}}>VP</span></span>
+                </div>
+                <input type="range" min={10} max={150} step={5}
+                  value={gs?.customVP || (MODES[gs?.gameMode||"schnell"]||MODES.normal).winVP}
+                  onChange={e=>isHost&&push({...gs, customVP: Number(e.target.value)})}
+                  disabled={!isHost}
+                  style={{width:"100%",accentColor:"#2a9d8f",cursor:isHost?"pointer":"default",opacity:isHost?1:0.5}}/>
+                <div style={{display:"flex",justifyContent:"space-between",color:"#2a2e42",fontSize:10,marginTop:3}}>
+                  <span>10 — Blitz</span><span>150 — Marathon</span>
+                </div>
+                {!isHost&&<div style={{color:"#2a2e42",fontSize:10,textAlign:"center",marginTop:4}}>Nur der Host kann das Ziel ändern</div>}
               </div>
             </div>
 
