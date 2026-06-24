@@ -1763,13 +1763,14 @@
               <div style={{color:"#4a5070",fontSize:10,letterSpacing:1.5,marginBottom:10,textTransform:"uppercase",fontWeight:600}}>Solo vs KI</div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
                 {Object.entries(MODES).map(([id,m])=>{
-                  const active = soloMode===id;
+                  const active = soloMode===id && soloVP===m.winVP;
+                  const modeSelected = soloMode===id;
                   return (
                     <button key={id} onClick={()=>{setSoloMode(id);setSoloVP(m.winVP);}} className="mode-btn"
-                      style={{background:active?"rgba(155,89,182,0.15)":"#13172280",border:"2px solid "+(active?"#9b59b6":"#2a2e42"),borderRadius:10,padding:"10px 4px 8px",cursor:"pointer",textAlign:"center"}}>
+                      style={{background:active?"rgba(155,89,182,0.15)":modeSelected?"rgba(155,89,182,0.06)":"#13172280",border:"2px solid "+(active?"#9b59b6":modeSelected?"#5a3a6a":"#2a2e42"),borderRadius:10,padding:"10px 4px 8px",cursor:"pointer",textAlign:"center"}}>
                       <div style={{fontSize:16,marginBottom:3}}>{m.label.split(" ")[0]}</div>
-                      <div style={{color:"#fff",fontWeight:700,fontSize:11,marginBottom:2}}>{m.label.split(" ").slice(1).join(" ")}</div>
-                      <div style={{color:active?"#b370d4":"#3a4060",fontSize:10,fontWeight:600}}>{m.desc}</div>
+                      <div style={{color:modeSelected?"#fff":"#6a7090",fontWeight:700,fontSize:11,marginBottom:2}}>{m.label.split(" ").slice(1).join(" ")}</div>
+                      <div style={{color:active?"#b370d4":modeSelected?"#5a3a6a":"#3a4060",fontSize:10,fontWeight:600}}>{m.desc}</div>
                     </button>
                   );
                 })}
