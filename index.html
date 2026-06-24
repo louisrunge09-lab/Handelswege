@@ -29,43 +29,43 @@
     const BUILDINGS = [
       { id: "farm", name: "Farm", icon: "🏡", levels: [
         { cost: { Holz: 2, Getreide: 1 }, income: { Getreide: 2 }, vp: 1, desc: "+2 Getreide/Rd" },
-        { cost: { Holz: 3, Getreide: 2 }, income: { Getreide: 4 }, vp: 2, desc: "+4 Getreide/Rd" },
-        { cost: { Holz: 5, Getreide: 4, Gold: 2 }, income: { Getreide: 7 }, vp: 3, desc: "+7 Getreide/Rd" },
+        { cost: { Holz: 5, Getreide: 4, Gold: 3 }, income: { Getreide: 4 }, vp: 2, desc: "+4 Getreide/Rd" },
+        { cost: { Holz: 8, Getreide: 7, Gold: 6 }, income: { Getreide: 7 }, vp: 3, desc: "+7 Getreide/Rd" },
       ]},
       { id: "sawmill", name: "Sägewerk", icon: "🪚", levels: [
         { cost: { Stein: 2, Gold: 1 }, income: { Holz: 3 }, vp: 1, desc: "+3 Holz/Rd" },
-        { cost: { Stein: 3, Gold: 2 }, income: { Holz: 5 }, vp: 2, desc: "+5 Holz/Rd" },
-        { cost: { Stein: 5, Gold: 4 }, income: { Holz: 8 }, vp: 3, desc: "+8 Holz/Rd" },
+        { cost: { Stein: 5, Gold: 4 }, income: { Holz: 5 }, vp: 2, desc: "+5 Holz/Rd" },
+        { cost: { Stein: 8, Gold: 7 }, income: { Holz: 8 }, vp: 3, desc: "+8 Holz/Rd" },
       ]},
       { id: "mine", name: "Mine", icon: "⛏️", levels: [
-        { cost: { Holz: 1, Stein: 2 }, income: { Stein: 2, Gold: 1 }, vp: 1, desc: "+2 Stein +1 Gold/Rd" },
-        { cost: { Holz: 2, Stein: 3, Gold: 1 }, income: { Stein: 3, Gold: 2 }, vp: 2, desc: "+3 Stein +2 Gold/Rd" },
-        { cost: { Holz: 3, Stein: 5, Gold: 3 }, income: { Stein: 5, Gold: 3 }, vp: 3, desc: "+5 Stein +3 Gold/Rd" },
+        { cost: { Holz: 1, Stein: 1 }, income: { Stein: 2, Gold: 1 }, vp: 1, desc: "+2 Stein +1 Gold/Rd" },
+        { cost: { Holz: 4, Stein: 5, Gold: 3 }, income: { Stein: 3, Gold: 2 }, vp: 2, desc: "+3 Stein +2 Gold/Rd" },
+        { cost: { Holz: 6, Stein: 8, Gold: 5 }, income: { Stein: 5, Gold: 3 }, vp: 3, desc: "+5 Stein +3 Gold/Rd" },
       ]},
       { id: "markt", name: "Markt", icon: "🏪", levels: [
         { cost: { Holz: 2, Gold: 1 }, income: { Gold: 2 }, vp: 2, desc: "+2 Gold/Rd" },
-        { cost: { Holz: 4, Gold: 3 }, income: { Gold: 3 }, vp: 3, desc: "+3 Gold/Rd" },
-        { cost: { Holz: 6, Getreide: 3, Gold: 5 }, income: { Gold: 5 }, vp: 4, desc: "+5 Gold/Rd" },
+        { cost: { Holz: 5, Gold: 5 }, income: { Gold: 3 }, vp: 3, desc: "+3 Gold/Rd" },
+        { cost: { Holz: 8, Getreide: 5, Gold: 8 }, income: { Gold: 5 }, vp: 4, desc: "+5 Gold/Rd" },
       ]},
       { id: "hafen", name: "Hafen", icon: "⚓", levels: [
         { cost: { Holz: 3, Gold: 2 }, income: { Gold: 1 }, vp: 3, desc: "+1 Gold/Rd, Bank 2:1" },
-        { cost: { Holz: 5, Gold: 4 }, income: { Gold: 2 }, vp: 4, desc: "+2 Gold/Rd, Bank 2:1" },
-        { cost: { Holz: 7, Gold: 6 }, income: { Gold: 3 }, vp: 5, desc: "+3 Gold/Rd, Bank 2:1" },
+        { cost: { Holz: 6, Gold: 6 }, income: { Gold: 2 }, vp: 4, desc: "+2 Gold/Rd, Bank 2:1" },
+        { cost: { Holz: 9, Gold: 9 }, income: { Gold: 3 }, vp: 5, desc: "+3 Gold/Rd, Bank 2:1" },
       ]},
       { id: "tempel", name: "Tempel", icon: "⛩️", levels: [
-        { cost: { Stein: 3, Gold: 2 }, income: {}, vp: 5, desc: "+5 VP" },
-        { cost: { Stein: 5, Gold: 4 }, income: {}, vp: 8, desc: "+8 VP" },
-        { cost: { Stein: 7, Gold: 6, Getreide: 3 }, income: {}, vp: 12, desc: "+12 VP" },
+        { cost: { Stein: 3, Getreide: 2 }, income: {}, vp: 5, desc: "+5 VP" },
+        { cost: { Stein: 7, Gold: 5, Getreide: 5 }, income: {}, vp: 8, desc: "+8 VP" },
+        { cost: { Stein: 10, Gold: 8, Getreide: 8 }, income: {}, vp: 12, desc: "+12 VP" },
       ]},
       { id: "uni", name: "Universität", icon: "🎓", levels: [
-        { cost: { Gold: 3, Getreide: 2 }, income: {}, vp: 5, desc: "+5 VP, +1 alle/Rd" },
-        { cost: { Gold: 5, Getreide: 3, Stein: 2 }, income: {}, vp: 7, desc: "+7 VP, +2 alle/Rd" },
-        { cost: { Gold: 8, Getreide: 5, Stein: 4 }, income: {}, vp: 10, desc: "+10 VP, +3 alle/Rd" },
+        { cost: { Gold: 2, Getreide: 3 }, income: {}, vp: 5, desc: "+5 VP, +1 alle/Rd" },
+        { cost: { Gold: 6, Getreide: 6, Stein: 4 }, income: {}, vp: 7, desc: "+7 VP, +2 alle/Rd" },
+        { cost: { Gold: 10, Getreide: 10, Stein: 7 }, income: {}, vp: 10, desc: "+10 VP, +3 alle/Rd" },
       ]},
       { id: "burg", name: "Burg", icon: "🏰", levels: [
-        { cost: { Stein: 3, Gold: 2 }, income: {}, vp: 6, desc: "+6 VP" },
-        { cost: { Stein: 5, Gold: 4, Holz: 2 }, income: {}, vp: 9, desc: "+9 VP" },
-        { cost: { Stein: 8, Gold: 6, Holz: 4 }, income: {}, vp: 13, desc: "+13 VP" },
+        { cost: { Stein: 3, Getreide: 2 }, income: {}, vp: 6, desc: "+6 VP" },
+        { cost: { Stein: 7, Gold: 5, Getreide: 4 }, income: {}, vp: 9, desc: "+9 VP" },
+        { cost: { Stein: 11, Gold: 8, Getreide: 7 }, income: {}, vp: 13, desc: "+13 VP" },
       ]},
     ];
 
@@ -76,7 +76,18 @@
       { cost: { Gold: 4 }, steal: 3, desc: "Klaut 3 zufällige Res." },
     ];
 
-    const BANK_RATES = { Holz: 3, Stein: 3, Getreide: 4 };
+    // Bank trades
+    const BANK_TRADES = [
+      // Res → Gold
+      { give: "Holz",     amt: 3, get: "Gold",     label: "3🪵→1🪙" },
+      { give: "Getreide", amt: 4, get: "Gold",     label: "4🌾→1🪙" },
+      { give: "Stein",    amt: 4, get: "Gold",     label: "4🪨→1🪙" },
+      // Gold → alles (2:1)
+      { give: "Gold",     amt: 2, get: "Holz",    label: "2🪙→1🪵" },
+      { give: "Gold",     amt: 2, get: "Stein",   label: "2🪙→1🪨" },
+      { give: "Gold",     amt: 2, get: "Getreide",label: "2🪙→1🌾" },
+    ];
+    const BANK_RATES = { Holz: 3, Stein: 4, Getreide: 4 };
 
     // ── HELPERS ──────────────────────────────────────────────────────────────
     function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -344,17 +355,17 @@
         await push({...gs, players: newPlayers});
       }
 
-      async function doBankTrade() {
-        if (!me || me.ready || !bankRes) return;
-        const hasHafen = (me.buildings["hafen"]||0) > 0;
-        const rate = hasHafen ? 2 : BANK_RATES[bankRes];
-        if ((me.resources[bankRes]||0) < bankAmt) return;
-        const goldGain = Math.floor(bankAmt / rate);
-        if (goldGain < 1) return;
+      async function doBankTrade(trade) {
+        if (!me || me.ready || !trade) return;
+        if ((me.resources[trade.give]||0) < trade.amt) return;
         const newPlayers = [...gs.players];
-        newPlayers[myIndex] = {...me, resources:{...me.resources, [bankRes]: me.resources[bankRes]-bankAmt, Gold:(me.resources.Gold||0)+goldGain}};
-        let g = addLog({...gs, players:newPlayers}, me.name+" → Bank: "+bankAmt+"x"+RES_ICONS[bankRes]+" → +"+goldGain+"🪙");
-        setPanel(null); setBankRes(null); setBankAmt(3);
+        const newRes = {...me.resources};
+        newRes[trade.give] = (newRes[trade.give]||0) - trade.amt;
+        newRes[trade.get] = (newRes[trade.get]||0) + 1;
+        newPlayers[myIndex] = {...me, resources: newRes};
+        let g = addLog({...gs, players:newPlayers},
+          me.name+" → Bank: "+trade.amt+RES_ICONS[trade.give]+" → +1"+RES_ICONS[trade.get]);
+        setPanel(null);
         await push(g);
       }
 
@@ -825,25 +836,29 @@
                 {/* Bank */}
                 {panel==="bank"&&(
                   <div style={{background:"#1b1f2e",borderRadius:10,padding:12,marginTop:10}}>
-                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>{hasHafen?"Hafen: 2:1":"Holz/Stein 3:1 · Getreide 4:1"} → 🪙 Gold</div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
-                      {["Holz","Stein","Getreide"].map(r=>(
-                        <button key={r} onClick={()=>{setBankRes(r);setBankAmt(hasHafen?2:BANK_RATES[r]);}}
-                          style={{background:bankRes===r?"#457b9d":"#252a3a",border:"1px solid "+(bankRes===r?"#457b9d":"#333"),borderRadius:6,color:"#fff",padding:"6px 10px",fontSize:13,cursor:"pointer"}}>
-                          {RES_ICONS[r]} {r} ({me.resources[r]||0})
-                        </button>
-                      ))}
-                    </div>
-                    {bankRes&&(
-                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                        <button onClick={()=>setBankAmt(a=>Math.max(hasHafen?2:BANK_RATES[bankRes],a-(hasHafen?2:BANK_RATES[bankRes])))} style={{background:"#333",border:"none",borderRadius:6,color:"#fff",width:34,height:34,fontSize:18,cursor:"pointer"}}>−</button>
-                        <span style={{color:"#fff",fontWeight:700,minWidth:24,textAlign:"center"}}>{bankAmt}</span>
-                        <button onClick={()=>setBankAmt(a=>Math.min(me.resources[bankRes]||0,a+(hasHafen?2:BANK_RATES[bankRes])))} style={{background:"#333",border:"none",borderRadius:6,color:"#fff",width:34,height:34,fontSize:18,cursor:"pointer"}}>+</button>
-                        <button onClick={doBankTrade} style={{flex:1,background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"9px 12px",fontWeight:700,fontSize:14,cursor:"pointer"}}>
-                          Tauschen → +{Math.floor(bankAmt/(hasHafen?2:BANK_RATES[bankRes]))} 🪙
-                        </button>
+                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>{hasHafen?"Hafen: alle Tausche 2:1":"Bank-Tausch:"}</div>
+                    {[
+                      {label:"Ressource → Gold", trades: hasHafen
+                        ? [{give:"Holz",amt:2,get:"Gold",label:"2🪵→1🪙"},{give:"Getreide",amt:2,get:"Gold",label:"2🌾→1🪙"},{give:"Stein",amt:2,get:"Gold",label:"2🪨→1🪙"}]
+                        : BANK_TRADES.filter(t=>t.get==="Gold")},
+                      {label:"Gold → Ressource (2:1)", trades: BANK_TRADES.filter(t=>t.give==="Gold")},
+                    ].map(section=>(
+                      <div key={section.label} style={{marginBottom:10}}>
+                        <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:5}}>{section.label}</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
+                          {section.trades.map((t,i)=>{
+                            const canDo = (me.resources[t.give]||0) >= t.amt;
+                            return (
+                              <button key={i} onClick={()=>canDo&&doBankTrade(t)}
+                                style={{background:canDo?"#252a3a":"#1b1f2e",border:"1px solid "+(canDo?"#457b9d":"#222"),borderRadius:8,padding:"8px 4px",cursor:canDo?"pointer":"default",opacity:canDo?1:0.4,textAlign:"center"}}>
+                                <div style={{color:"#fff",fontSize:12,fontWeight:700}}>{t.label}</div>
+                                <div style={{color:"#555",fontSize:10}}>({me.resources[t.give]||0})</div>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                    )}
+                    ))}
                   </div>
                 )}
 
