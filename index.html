@@ -1104,6 +1104,12 @@
         await push(g);
       }
 
+      async function breakAlliance(targetIdx) {
+        const newAlliances = (gs.alliances||[]).filter(a=>!((a.a===myIndex&&a.b===targetIdx)||(a.a===targetIdx&&a.b===myIndex)));
+        let g = addLog({...gs, alliances:newAlliances}, "💔 "+me.name+" bricht Allianz mit "+gs.players[targetIdx].name+"!");
+        await push(g);
+      }
+
       function isAllied(i, j) {
         return !!(gs&&(gs.alliances||[]).find(a=>((a.a===i&&a.b===j)||(a.a===j&&a.b===i))&&a.endsAfter>gs.round));
       }
@@ -1904,10 +1910,18 @@
                           const offered = (gs.allianceOffers||[]).find(o=>o.from===myIndex&&o.to===i);
                           const theyOffer = (gs.allianceOffers||[]).find(o=>o.from===i&&o.to===myIndex);
                           return (
-                            <button key={i} onClick={()=>!allied&&!offered&&!me.ready&&proposeAlliance(i)}
-                              style={{background:allied?"#1a2a1a":offered?"#1a1a2a":"#252a3a",border:"1px solid "+(allied?"#2a9d8f":offered?"#9b59b6":"#333"),borderRadius:7,color:allied?"#2a9d8f":offered?"#9b59b6":"#aaa",padding:"5px 9px",fontSize:11,cursor:allied||offered||me.ready?"default":"pointer"}}>
-                              {allied?"🤝 "+p.name+" (Verbündet)":offered?"⏳ "+p.name+" (angefragt)":theyOffer?"💌 "+p.name+" (wartet)":"🤝 "+p.name}
-                            </button>
+                            <div key={i} style={{display:"flex",gap:4,alignItems:"center"}}>
+                              <button onClick={()=>!allied&&!offered&&!me.ready&&proposeAlliance(i)}
+                                style={{background:allied?"#1a2a1a":offered?"#1a1a2a":"#252a3a",border:"1px solid "+(allied?"#2a9d8f":offered?"#9b59b6":"#333"),borderRadius:7,color:allied?"#2a9d8f":offered?"#9b59b6":"#aaa",padding:"5px 9px",fontSize:11,cursor:!allied&&!offered&&!me.ready?"pointer":"default"}}>
+                                {allied?"🤝 "+p.name:offered?"⏳ "+p.name+" (angefragt)":theyOffer?"💌 "+p.name+" (wartet)":"🤝 "+p.name}
+                              </button>
+                              {allied&&!me.ready&&(
+                                <button onClick={()=>breakAlliance(i)}
+                                  style={{background:"#2a1010",border:"1px solid #e76f51",borderRadius:7,color:"#e76f51",padding:"5px 7px",fontSize:11,cursor:"pointer"}}>
+                                  💔
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
