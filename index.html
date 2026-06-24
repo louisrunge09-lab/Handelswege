@@ -9,8 +9,97 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #1b1f2e; font-family: system-ui, sans-serif; }
+    body { background: #0d1117; font-family: system-ui, sans-serif; }
     input, button { font-family: inherit; }
+
+    @keyframes twinkle {
+      0%,100% { opacity:0.15; transform:scale(0.8); }
+      50% { opacity:1; transform:scale(1.5); }
+    }
+    @keyframes float-up {
+      0% { opacity:1; transform:translateY(0) scale(1); }
+      100% { opacity:0; transform:translateY(-60px) scale(1.3); }
+    }
+    @keyframes slide-down {
+      from { opacity:0; transform:translateY(-12px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+    @keyframes bounce-in {
+      0% { transform:scale(0.85); opacity:0; }
+      60% { transform:scale(1.04); }
+      100% { transform:scale(1); opacity:1; }
+    }
+    @keyframes glow-pulse {
+      0%,100% { box-shadow:0 0 10px rgba(42,157,143,0.3); }
+      50% { box-shadow:0 0 28px rgba(42,157,143,0.8),0 0 50px rgba(42,157,143,0.2); }
+    }
+    @keyframes raid-shake {
+      0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}
+    }
+    @keyframes gradient-shift {
+      0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}
+    }
+    @keyframes spin-slow {
+      from{transform:rotate(0deg)} to{transform:rotate(360deg)}
+    }
+
+    .btn-primary {
+      transition: all 0.18s cubic-bezier(0.4,0,0.2,1) !important;
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px) !important;
+      filter: brightness(1.18);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+    }
+    .btn-primary:active { transform: scale(0.97) !important; }
+
+    .btn-ready { animation: glow-pulse 2s ease-in-out infinite; }
+
+    .build-card { transition: all 0.15s ease !important; }
+    .build-card:hover {
+      transform: translateY(-3px) scale(1.02) !important;
+      box-shadow: 0 6px 20px rgba(244,162,97,0.25) !important;
+      border-color: rgba(244,162,97,0.6) !important;
+      z-index: 10;
+    }
+
+    .res-card { transition: all 0.18s ease !important; cursor: default; }
+    .res-card:hover {
+      transform: translateY(-4px) scale(1.06) !important;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+    }
+
+    .action-btn { transition: all 0.15s ease !important; }
+    .action-btn:hover { filter: brightness(1.25); transform: translateY(-2px) !important; }
+    .action-btn:active { transform: scale(0.95) !important; }
+
+    .panel-slide { animation: slide-down 0.22s ease; }
+    .bounce-in { animation: bounce-in 0.35s cubic-bezier(0.4,0,0.2,1); }
+    .shake { animation: raid-shake 0.4s ease; }
+
+    .gradient-title {
+      background: linear-gradient(135deg,#f4a261,#e76f51,#9b59b6,#457b9d);
+      background-size: 300% 300%;
+      animation: gradient-shift 4s ease infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .floater {
+      position: fixed;
+      pointer-events: none;
+      font-weight: 900;
+      font-size: 18px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      animation: float-up 1.4s ease forwards;
+      z-index: 999;
+    }
+    .vp-bar-fill {
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #2e3448; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -342,6 +431,27 @@
       );
     }
 
+    // ── STARS ────────────────────────────────────────────────────────────
+    const STARS = Array.from({length:90}, () => ({
+      left: Math.random()*100, top: Math.random()*100,
+      size: Math.random()*1.8+0.4,
+      dur: Math.random()*4+2, delay: Math.random()*6,
+    }));
+    function StarField() {
+      return (
+        <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+          {STARS.map((s,i) => (
+            <div key={i} style={{
+              position:"absolute", left:s.left+"%", top:s.top+"%",
+              width:s.size+"px", height:s.size+"px",
+              borderRadius:"50%", background:"#c8d8ff",
+              animation:`twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
+            }}/>
+          ))}
+        </div>
+      );
+    }
+
     // ── KI ───────────────────────────────────────────────────────────────
     function runAI(gs, aiIdx) {
       const humanIdx = aiIdx === 0 ? 1 : 0;
@@ -419,6 +529,8 @@
       const [feedback, setFeedback] = useState("");
       const [isSolo, setIsSolo] = useState(false);
       const [soloMode, setSoloMode] = useState("normal");
+      const [floaters, setFloaters] = useState([]);
+      const prevResRef = useRef(null);
 
       // Local UI
       const [panel, setPanel] = useState(null);
@@ -509,6 +621,28 @@
           setTimeout(() => setRaidAlert(null), 5000);
         }
       }, [gs && gs.log && gs.log[0]]);
+
+      // Floating numbers when my resources change
+      useEffect(() => {
+        if (!me) { prevResRef.current = null; return; }
+        const prev = prevResRef.current;
+        prevResRef.current = me.resources;
+        if (!prev) return;
+        const newF = [];
+        for (const r of RESOURCES) {
+          const diff = (me.resources[r]||0) - (prev[r]||0);
+          if (diff === 0) continue;
+          newF.push({
+            id: Date.now()+r, text: (diff>0?"+":"")+diff+RES_ICONS[r],
+            color: diff>0?"#2a9d8f":"#e76f51",
+            x: 20+Math.random()*60, y: 30+Math.random()*40,
+          });
+        }
+        if (newF.length) {
+          setFloaters(f => [...f, ...newF]);
+          setTimeout(() => setFloaters(f => f.filter(x => !newF.find(n=>n.id===x.id))), 1500);
+        }
+      }, [me && JSON.stringify(me.resources)]);
 
       // Show toast when a new round begins
       const lastRoundRef = useRef(null);
@@ -981,15 +1115,18 @@
 
       // HOME
       if (screen === "home") return (
-        <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div style={{width:"100%",maxWidth:400}}>
-            <h1 style={{color:"#f4a261",textAlign:"center",fontSize:34,fontWeight:900,marginBottom:4}}>Handelswege</h1>
-            <p style={{color:"#555",textAlign:"center",marginBottom:28,fontSize:13}}>Alle spielen gleichzeitig · 2–4 Spieler</p>
+        <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d1117 0%,#131825 50%,#0d1117 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,position:"relative"}}>
+          <StarField/>
+          <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:1}}>
+            <div style={{textAlign:"center",marginBottom:32}}>
+              <h1 className="gradient-title" style={{fontSize:42,fontWeight:900,marginBottom:6,letterSpacing:1}}>Handelswege</h1>
+              <p style={{color:"#3a4060",fontSize:13,letterSpacing:2,textTransform:"uppercase"}}>Strategie · Handel · Herrschaft</p>
+            </div>
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:14}}>
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>DEIN NAME</div>
               <input style={ipt} value={myName} onChange={e=>{setMyName(e.target.value);setError("");setFeedback("");}} placeholder="Name eingeben…" maxLength={16}/>
             </div>
-            <button onClick={createRoom} disabled={loading} style={{width:"100%",background:"#f4a261",border:"none",borderRadius:12,color:"#1b1f2e",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:8}}>
+            <button onClick={createRoom} disabled={loading} className="btn-primary" style={{width:"100%",background:"linear-gradient(135deg,#f4a261,#e76f51)",border:"none",borderRadius:12,color:"#1b1f2e",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:8,boxShadow:"0 4px 20px rgba(244,162,97,0.35)"}}>
               🏠 Neuen Raum erstellen
             </button>
 
@@ -1009,7 +1146,7 @@
                   </button>
                 ))}
               </div>
-              <button onClick={startSolo} disabled={loading} style={{width:"100%",background:"#9b59b6",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer"}}>
+              <button onClick={startSolo} disabled={loading} className="btn-primary" style={{width:"100%",background:"linear-gradient(135deg,#9b59b6,#8e44ad)",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(155,89,182,0.4)"}}>
                 🤖 Solo gegen KI spielen
               </button>
             </div>
@@ -1017,7 +1154,7 @@
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>RAUM BEITRETEN</div>
               <input style={{...ipt,textTransform:"uppercase",letterSpacing:4,textAlign:"center",fontSize:22,fontWeight:700,marginBottom:10}}
                 value={joinCode} onChange={e=>{setJoinCode(e.target.value.toUpperCase());setError("");setFeedback("");}} placeholder="CODE" maxLength={4}/>
-              <button onClick={joinRoom} disabled={loading} style={{width:"100%",background:"#457b9d",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer"}}>
+              <button onClick={joinRoom} disabled={loading} className="btn-primary" style={{width:"100%",background:"linear-gradient(135deg,#457b9d,#2d6a8f)",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(69,123,157,0.4)"}}>
                 Beitreten
               </button>
             </div>
@@ -1164,7 +1301,12 @@
       const offersForMe = (gs.tradeOffers||[]).filter(o=>o.to===myIndex);
 
       return (
-        <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",flexDirection:"row",alignItems:"flex-start"}}>
+        <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d1117 0%,#131825 60%,#0d1117 100%)",display:"flex",flexDirection:"row",alignItems:"flex-start",position:"relative"}}>
+          <StarField/>
+          {/* Floating resource numbers */}
+          {floaters.map(f=>(
+            <div key={f.id} className="floater" style={{left:f.x+"%",top:f.y+"%",color:f.color}}>{f.text}</div>
+          ))}
           {/* Main game column */}
           <div style={{flex:1,minWidth:0,padding:"12px 12px 40px",maxWidth:620,marginRight:270}}>
 
@@ -1272,7 +1414,7 @@
                     <div style={{color:"#fff",fontSize:20,fontWeight:900}}>{vp}</div>
                     <div style={{color:"#444",fontSize:10}}>/ {getWinVP(gs)} VP</div>
                     <div style={{marginTop:3,height:3,background:"#333",borderRadius:2,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:Math.min(100,vp/getWinVP(gs)*100)+"%",background:p.color}}/>
+                      <div className="vp-bar-fill" style={{height:"100%",width:Math.min(100,vp/getWinVP(gs)*100)+"%",background:`linear-gradient(90deg,${p.color},${p.color}cc)`,boxShadow:`0 0 8px ${p.color}88`}}/>
                     </div>
                     {p.ready && <div style={{color:"#2a9d8f",fontSize:10,marginTop:2}}>✓ bereit</div>}
                   </div>
@@ -1285,7 +1427,7 @@
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>MEINE RESSOURCEN</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
                 {RESOURCES.map(r=>(
-                  <div key={r} style={{background:"#1b1f2e",borderRadius:8,padding:"8px 4px",textAlign:"center"}}>
+                  <div key={r} className="res-card" style={{background:"linear-gradient(160deg,#1e2436,#161b28)",borderRadius:10,padding:"10px 4px",textAlign:"center",border:"1px solid #2a2f42",boxShadow:"0 2px 8px rgba(0,0,0,0.3)"}}>
                     <div style={{fontSize:18}}>{RES_ICONS[r]}</div>
                     <div style={{color:"#fff",fontWeight:800,fontSize:20}}>{me.resources[r]||0}</div>
                     <div style={{color:"#555",fontSize:10}}>{r}</div>
@@ -1422,7 +1564,8 @@
                         const ok = !maxed && !atLimit && !locked && canAfford(me.resources, scaledCost);
                         return (
                           <button key={b.id} onClick={()=>ok&&doBuild(b.id)}
-                            style={{background:maxed?"#1a3a1a":(locked?"#1a1a1a":(plannedForThis>0?"#1e2a3a":(ok?"#252a3a":"#1b1f2e"))),border:"1px solid "+(maxed?"#2a9d8f":(locked?"#2a2a2a":(ok?"#444":"#222"))),borderRadius:8,padding:"8px 10px",textAlign:"left",cursor:ok?"pointer":"default",opacity:maxed?0.7:(locked?0.5:(ok?1:(plannedForThis>0?0.7:0.4)))}}>
+                            className={ok?"build-card":""}
+                            style={{background:maxed?"linear-gradient(135deg,#1a3a1a,#142b14)":(locked?"#111318":(plannedForThis>0?"linear-gradient(135deg,#1e2a3a,#162030)":(ok?"linear-gradient(135deg,#1e2436,#191e2e)":"#141720"))),border:"1px solid "+(maxed?"#2a9d8f":(locked?"#1e1e1e":(ok?"#2e3448":"#1a1d28"))),borderRadius:10,padding:"10px",textAlign:"left",cursor:ok?"pointer":"default",opacity:maxed?0.8:(locked?0.45:(ok?1:(plannedForThis>0?0.7:0.4))),boxShadow:ok?"0 2px 8px rgba(0,0,0,0.4)":"none"}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:2}}>
                               <div><span style={{fontSize:14}}>{locked?"🔒":b.icon}</span><span style={{color:locked?"#555":"#fff",fontWeight:700,fontSize:12,marginLeft:4}}>{b.name}</span></div>
                               <LevelDots level={cur}/>
@@ -1542,7 +1685,8 @@
 
             {/* Ready button */}
             <button onClick={markReady}
-              style={{width:"100%",background:me.ready?"#1a3a1a":"#2a9d8f",border:"2px solid "+(me.ready?"#2a9d8f":"#2a9d8f"),borderRadius:12,color:me.ready?"#2a9d8f":"#fff",padding:15,fontSize:16,fontWeight:800,cursor:"pointer",marginBottom:10}}>
+              className={me.ready?"":"btn-ready"}
+              style={{width:"100%",background:me.ready?"#1a3a1a":"linear-gradient(135deg,#2a9d8f,#21867a)",border:"2px solid #2a9d8f",borderRadius:12,color:me.ready?"#2a9d8f":"#fff",padding:15,fontSize:16,fontWeight:800,cursor:"pointer",marginBottom:10,transition:"all 0.2s"}}>
               {me.ready?"↩ Bereit aufheben ("+readyCount+"/"+gs.players.length+")":"✓ Runde abschließen ("+readyCount+"/"+gs.players.length+" bereit)"}
             </button>
 
