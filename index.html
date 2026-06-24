@@ -78,6 +78,105 @@
     .bounce-in { animation: bounce-in 0.35s cubic-bezier(0.4,0,0.2,1); }
     .shake { animation: raid-shake 0.4s ease; }
 
+    @keyframes shoot {
+      0%   { transform:translateX(0) translateY(0) rotate(-32deg); opacity:1; }
+      80%  { opacity:0.6; }
+      100% { transform:translateX(480px) translateY(200px) rotate(-32deg); opacity:0; }
+    }
+    @keyframes fade-up-in {
+      from { opacity:0; transform:translateY(18px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes nebula-drift {
+      0%,100% { opacity:0.05; transform:scale(1); }
+      50%     { opacity:0.1;  transform:scale(1.1); }
+    }
+    @keyframes home-float {
+      0%,100% { transform:translateY(0); }
+      50%     { transform:translateY(-5px); }
+    }
+
+    .hero-l1 { animation:fade-up-in 0.65s ease both; }
+    .hero-l2 { animation:fade-up-in 0.65s 0.12s ease both; }
+    .hero-l3 { animation:fade-up-in 0.65s 0.24s ease both; }
+    .home-sect { animation:fade-up-in 0.55s 0.3s ease both; }
+
+    .home-card {
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.25s ease !important;
+    }
+    .home-card:hover {
+      transform: translateY(-5px) !important;
+      box-shadow: 0 14px 44px rgba(0,0,0,0.55) !important;
+    }
+
+    .cta-orange {
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1) !important;
+      box-shadow: 0 4px 20px rgba(244,162,97,0.4) !important;
+    }
+    .cta-orange:hover {
+      transform: translateY(-3px) scale(1.025) !important;
+      box-shadow: 0 10px 36px rgba(244,162,97,0.6), 0 0 50px rgba(244,162,97,0.12) !important;
+      filter: brightness(1.07);
+    }
+    .cta-orange:active { transform: scale(0.97) !important; }
+
+    .cta-purple {
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1) !important;
+      box-shadow: 0 4px 20px rgba(155,89,182,0.4) !important;
+    }
+    .cta-purple:hover {
+      transform: translateY(-3px) scale(1.025) !important;
+      box-shadow: 0 10px 36px rgba(155,89,182,0.55) !important;
+      filter: brightness(1.08);
+    }
+    .cta-purple:active { transform: scale(0.97) !important; }
+
+    .cta-blue {
+      transition: all 0.2s cubic-bezier(0.4,0,0.2,1) !important;
+      box-shadow: 0 4px 16px rgba(69,123,157,0.4) !important;
+    }
+    .cta-blue:hover {
+      transform: translateY(-3px) scale(1.025) !important;
+      box-shadow: 0 10px 32px rgba(69,123,157,0.55) !important;
+      filter: brightness(1.08);
+    }
+    .cta-blue:active { transform: scale(0.97) !important; }
+
+    .mode-btn {
+      transition: all 0.15s ease !important;
+      position: relative;
+    }
+    .mode-btn:hover { transform:translateY(-2px) !important; filter:brightness(1.15); }
+    .mode-btn:active { transform:scale(0.96) !important; }
+
+    .home-input:focus {
+      border-color: rgba(155,89,182,0.7) !important;
+      box-shadow: 0 0 0 3px rgba(155,89,182,0.15) !important;
+    }
+    .code-input:focus {
+      border-color: rgba(69,123,157,0.8) !important;
+      box-shadow: 0 0 0 3px rgba(69,123,157,0.18) !important;
+    }
+
+    .version-badge {
+      position: fixed;
+      top: 14px; right: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 4px 10px;
+      color: #3a4060;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    @media (max-width: 480px) {
+      .home-title { font-size: 34px !important; }
+      .home-sub1  { font-size: 13px !important; }
+    }
+
     .gradient-title {
       background: linear-gradient(135deg,#f4a261,#e76f51,#9b59b6,#457b9d);
       background-size: 300% 300%;
@@ -464,20 +563,44 @@
     }
 
     // ── STARS ────────────────────────────────────────────────────────────
-    const STARS = Array.from({length:90}, () => ({
-      left: Math.random()*100, top: Math.random()*100,
-      size: Math.random()*1.8+0.4,
-      dur: Math.random()*4+2, delay: Math.random()*6,
+    const STARS = Array.from({length:120}, (_,i) => {
+      const tier = i < 65 ? 0 : i < 100 ? 1 : 2;
+      const col = ["#c8d8ff","#d8e8ff","#e8d0ff","#ffffff"][Math.floor(Math.random()*4)];
+      return {
+        left: Math.random()*100, top: Math.random()*100,
+        size: tier===0 ? Math.random()*0.7+0.3 : tier===1 ? Math.random()*1.1+0.8 : Math.random()*1.8+1.4,
+        dur: Math.random()*5+2, delay: Math.random()*9, color: col,
+      };
+    });
+    const SHOOTS = Array.from({length:5}, (_,i) => ({
+      top: 5+i*14, left: 5+i*12,
+      delay: 7+i*9, dur: 0.75+i*0.1,
     }));
     function StarField() {
       return (
         <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
+          {/* Nebula glows */}
+          <div style={{position:"absolute",width:"60vw",height:"60vw",borderRadius:"50%",background:"radial-gradient(circle,rgba(155,89,182,0.07) 0%,transparent 70%)",top:"5%",left:"20%",animation:"nebula-drift 14s ease-in-out infinite"}}/>
+          <div style={{position:"absolute",width:"45vw",height:"45vw",borderRadius:"50%",background:"radial-gradient(circle,rgba(69,123,157,0.06) 0%,transparent 70%)",top:"55%",right:"5%",animation:"nebula-drift 18s 4s ease-in-out infinite"}}/>
+          <div style={{position:"absolute",width:"35vw",height:"35vw",borderRadius:"50%",background:"radial-gradient(circle,rgba(244,162,97,0.04) 0%,transparent 70%)",bottom:"10%",left:"5%",animation:"nebula-drift 20s 8s ease-in-out infinite"}}/>
+          {/* Stars */}
           {STARS.map((s,i) => (
             <div key={i} style={{
               position:"absolute", left:s.left+"%", top:s.top+"%",
               width:s.size+"px", height:s.size+"px",
-              borderRadius:"50%", background:"#c8d8ff",
+              borderRadius:"50%", background:s.color,
               animation:`twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
+            }}/>
+          ))}
+          {/* Shooting stars */}
+          {SHOOTS.map((sh,i) => (
+            <div key={"sh"+i} style={{
+              position:"absolute", top:sh.top+"%", left:sh.left+"%",
+              width:100, height:1.5,
+              background:"linear-gradient(90deg,rgba(255,255,255,0.9),rgba(200,216,255,0.4),transparent)",
+              borderRadius:2,
+              animation:`shoot ${sh.dur}s linear ${sh.delay}s infinite`,
+              opacity:0,
             }}/>
           ))}
         </div>
@@ -1465,67 +1588,100 @@
 
       // HOME
       if (screen === "home") return (
-        <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d1117 0%,#131825 50%,#0d1117 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,position:"relative"}}>
+        <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d1117 0%,#111624 55%,#0d1117 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px",position:"relative"}}>
           <StarField/>
+          {/* Version badge */}
+          <div className="version-badge">Alpha {VERSION}</div>
           <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:1}}>
-            <div style={{textAlign:"center",marginBottom:32}}>
-              <h1 className="gradient-title" style={{fontSize:42,fontWeight:900,marginBottom:6,letterSpacing:1}}>Handelswege</h1>
-              <p style={{color:"#3a4060",fontSize:13,letterSpacing:2,textTransform:"uppercase"}}>Strategie · Handel · Herrschaft</p>
+
+            {/* Hero */}
+            <div style={{textAlign:"center",marginBottom:28}}>
+              <h1 className="gradient-title hero-l1 home-title" style={{fontSize:46,fontWeight:900,marginBottom:10,letterSpacing:1,lineHeight:1.1}}>Handelswege</h1>
+              <p className="hero-l2 home-sub1" style={{color:"#c8d0e8",fontSize:15,fontWeight:500,marginBottom:6,lineHeight:1.5}}>
+                Handle mit Ressourcen, schließe Bündnisse und errichte dein Handelsimperium.
+              </p>
+              <p className="hero-l3" style={{color:"#3a4060",fontSize:12,letterSpacing:1.5,textTransform:"uppercase"}}>
+                Tritt gegen Freunde oder die KI an und dominiere die Handelswege.
+              </p>
             </div>
-            <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:14}}>
-              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>DEIN NAME</div>
-              <input style={ipt} value={myName} onChange={e=>{setMyName(e.target.value);setError("");setFeedback("");}} placeholder="Name eingeben…" maxLength={16}/>
+
+            {/* Name */}
+            <div className="home-card home-sect" style={{background:"#1e2233",border:"1px solid #2a2e42",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
+              <div style={{color:"#4a5070",fontSize:10,letterSpacing:1.5,marginBottom:8,textTransform:"uppercase",fontWeight:600}}>Dein Name</div>
+              <input className="home-input" style={{...ipt,background:"#13172200",border:"1px solid #2e3450",transition:"border-color 0.2s,box-shadow 0.2s"}}
+                value={myName} onChange={e=>{setMyName(e.target.value);setError("");setFeedback("");}}
+                placeholder="Name eingeben…" maxLength={16}/>
             </div>
-            <button onClick={createRoom} disabled={loading} className="btn-primary" style={{width:"100%",background:"linear-gradient(135deg,#f4a261,#e76f51)",border:"none",borderRadius:12,color:"#1b1f2e",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:8,boxShadow:"0 4px 20px rgba(244,162,97,0.35)"}}>
+
+            {/* Primary CTA */}
+            <button onClick={createRoom} disabled={loading} className="cta-orange home-sect"
+              style={{width:"100%",background:"linear-gradient(135deg,#f4a261,#e76f51)",border:"none",borderRadius:12,color:"#1b1f2e",padding:"16px 0",fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:10,letterSpacing:0.3}}>
               🏠 Neuen Raum erstellen
             </button>
 
             {/* Solo vs KI */}
-            <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:12}}>
-              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>SOLO VS KI</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
-                {Object.entries(MODES).map(([id,m])=>(
-                  <button key={id} onClick={()=>setSoloMode(id)}
-                    style={{background:soloMode===id?"#9b59b622":"#1b1f2e",border:"2px solid "+(soloMode===id?"#9b59b6":"#333"),borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center"}}>
-                    <div style={{color:"#fff",fontWeight:700,fontSize:11}}>{m.label}</div>
-                    <div style={{color:soloMode===id?"#9b59b6":"#444",fontSize:10}}>{m.winVP} VP</div>
-                  </button>
-                ))}
+            <div className="home-card home-sect" style={{background:"#1e2233",border:"1px solid #2a2e42",borderRadius:14,padding:"14px 16px",marginBottom:10}}>
+              <div style={{color:"#4a5070",fontSize:10,letterSpacing:1.5,marginBottom:10,textTransform:"uppercase",fontWeight:600}}>Solo vs KI</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
+                {Object.entries(MODES).map(([id,m])=>{
+                  const active = soloMode===id;
+                  return (
+                    <button key={id} onClick={()=>setSoloMode(id)} className="mode-btn"
+                      style={{background:active?"rgba(155,89,182,0.15)":"#13172280",border:"2px solid "+(active?"#9b59b6":"#2a2e42"),borderRadius:10,padding:"10px 4px 8px",cursor:"pointer",textAlign:"center"}}>
+                      <div style={{fontSize:16,marginBottom:3}}>{m.label.split(" ")[0]}</div>
+                      <div style={{color:"#fff",fontWeight:700,fontSize:11,marginBottom:2}}>{m.label.split(" ").slice(1).join(" ")}</div>
+                      <div style={{color:active?"#b370d4":"#3a4060",fontSize:10,fontWeight:600}}>{m.winVP} VP</div>
+                    </button>
+                  );
+                })}
               </div>
-              <div style={{display:"flex",gap:6,marginBottom:10}}>
-                <div style={{color:"#555",fontSize:11,lineHeight:"28px"}}>KI-Gegner:</div>
+              <div style={{background:"#13172280",borderRadius:8,padding:"6px 10px",marginBottom:10,color:"#6a7090",fontSize:11}}>
+                {MODES[soloMode]?.desc}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+                <div style={{color:"#4a5070",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>KI-Gegner:</div>
                 {[1,2,3].map(n=>(
-                  <button key={n} onClick={()=>setNumAI(n)}
-                    style={{flex:1,background:numAI===n?"#9b59b633":"#1b1f2e",border:"1px solid "+(numAI===n?"#9b59b6":"#333"),borderRadius:7,color:numAI===n?"#c39bd3":"#666",padding:"5px 0",fontSize:12,cursor:"pointer",fontWeight:700}}>
+                  <button key={n} onClick={()=>setNumAI(n)} className="mode-btn"
+                    style={{flex:1,background:numAI===n?"rgba(155,89,182,0.2)":"#13172280",border:"1px solid "+(numAI===n?"#9b59b6":"#2a2e42"),borderRadius:8,color:numAI===n?"#c39bd3":"#4a5070",padding:"6px 0",fontSize:12,cursor:"pointer",fontWeight:700}}>
                     {n} 🤖
                   </button>
                 ))}
               </div>
-              <button onClick={startSolo} disabled={loading} className="btn-primary" style={{width:"100%",background:"linear-gradient(135deg,#9b59b6,#8e44ad)",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(155,89,182,0.4)"}}>
+              <button onClick={startSolo} disabled={loading} className="cta-purple"
+                style={{width:"100%",background:"linear-gradient(135deg,#9b59b6,#7d3c98)",border:"none",borderRadius:10,color:"#fff",padding:"13px 0",fontSize:15,fontWeight:700,cursor:"pointer"}}>
                 🤖 Solo gegen {numAI} KI spielen
               </button>
             </div>
-            <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px"}}>
-              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>RAUM BEITRETEN</div>
-              <input style={{...ipt,textTransform:"uppercase",letterSpacing:4,textAlign:"center",fontSize:22,fontWeight:700,marginBottom:10}}
-                value={joinCode} onChange={e=>{setJoinCode(e.target.value.toUpperCase());setError("");setFeedback("");}} placeholder="CODE" maxLength={4}/>
-              <button onClick={joinRoom} disabled={loading} className="btn-primary" style={{width:"100%",background:"linear-gradient(135deg,#457b9d,#2d6a8f)",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 16px rgba(69,123,157,0.4)"}}>
-                Beitreten
+
+            {/* Join room */}
+            <div className="home-card home-sect" style={{background:"#1e2233",border:"1px solid #2a2e42",borderRadius:14,padding:"14px 16px"}}>
+              <div style={{color:"#4a5070",fontSize:10,letterSpacing:1.5,marginBottom:8,textTransform:"uppercase",fontWeight:600}}>Raum beitreten</div>
+              <input className="code-input"
+                style={{...ipt,fontFamily:"'Courier New',Courier,monospace",textTransform:"uppercase",letterSpacing:8,textAlign:"center",fontSize:24,fontWeight:900,marginBottom:10,background:"#13172280",border:"1px solid #2e3450",transition:"border-color 0.2s,box-shadow 0.2s",color:"#e8f0ff"}}
+                value={joinCode} onChange={e=>{setJoinCode(e.target.value.toUpperCase());setError("");setFeedback("");}}
+                placeholder="ABCD" maxLength={4} autoComplete="off" spellCheck={false}/>
+              <button onClick={joinRoom} disabled={loading} className="cta-blue"
+                style={{width:"100%",background:"linear-gradient(135deg,#457b9d,#2d6a8f)",border:"none",borderRadius:10,color:"#fff",padding:"13px 0",fontSize:15,fontWeight:700,cursor:"pointer"}}>
+                🚪 Beitreten
               </button>
             </div>
+
             {error && (
-              <div style={{background:"#2a1010",border:"1px solid #e76f51",borderRadius:10,padding:"10px 14px",marginTop:12,textAlign:"center",color:"#e76f51",fontSize:13}}>
+              <div style={{background:"rgba(42,16,16,0.9)",border:"1px solid #e76f51",borderRadius:10,padding:"10px 14px",marginTop:10,textAlign:"center",color:"#e76f51",fontSize:13,animation:"fade-up-in 0.25s ease"}}>
                 {error}
               </div>
             )}
             {feedback && !error && (
-              <div style={{background:"#0e2a1a",border:"1px solid #2a9d8f",borderRadius:10,padding:"10px 14px",marginTop:12,textAlign:"center",color:"#2a9d8f",fontSize:13}}>
+              <div style={{background:"rgba(14,42,26,0.9)",border:"1px solid #2a9d8f",borderRadius:10,padding:"10px 14px",marginTop:10,textAlign:"center",color:"#2a9d8f",fontSize:13,animation:"fade-up-in 0.25s ease"}}>
                 {feedback}
               </div>
             )}
-            <div style={{textAlign:"center",marginTop:14}}>
-              <button onClick={()=>setShowTutorial(true)} style={{background:"none",border:"none",color:"#444",fontSize:12,cursor:"pointer"}}>❓ Wie spielt man?</button>
-              <span style={{color:"#2a2a2a",fontSize:11,marginLeft:12}}>{VERSION}</span>
+
+            <div style={{textAlign:"center",marginTop:16,display:"flex",justifyContent:"center",alignItems:"center",gap:16}}>
+              <button onClick={()=>setShowTutorial(true)} style={{background:"none",border:"none",color:"#3a4060",fontSize:12,cursor:"pointer",transition:"color 0.15s"}}
+                onMouseEnter={e=>e.target.style.color="#6a7090"} onMouseLeave={e=>e.target.style.color="#3a4060"}>
+                ❓ Wie spielt man?
+              </button>
             </div>
           </div>
           {showTutorial && <TutorialOverlay onClose={()=>{setShowTutorial(false);localStorage.setItem("hwt","1");}}/>}
