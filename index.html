@@ -21,11 +21,17 @@
     const SUPABASE_URL = "https://rejrcuapcendtviezvfc.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlanJjdWFwY2VuZHR2aWV6dmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNjQwNzcsImV4cCI6MjA5Nzg0MDA3N30.ru33fqL5plRCZRwzEe8qQTJ25Bv3MstXt-wi5Y2IqI0";
 
-    const VERSION = "v2.0";
-    const PLAYER_COLORS = ["#f4a261", "#457b9d", "#2a9d8f", "#e76f51"];
+    const VERSION = "v2.2";
+    const PLAYER_COLORS = ["#f4a261","#457b9d","#2a9d8f","#e76f51","#9b59b6","#e9c46a","#f72585","#4cc9f0","#06d6a0","#ff6b35"];
     const RESOURCES = ["Holz", "Stein", "Getreide", "Gold"];
     const RES_ICONS = { Holz: "🪵", Stein: "🪨", Getreide: "🌾", Gold: "🪙" };
-    const WIN_VP = 30;
+    const MODES = {
+      schnell: { label: "⚡ Schnell", winVP: 30,  resMulti: 1.8, incMulti: 1.6, costMulti: 0.75, desc: "30 VP · Mehr Ressourcen" },
+      normal:  { label: "🏆 Normal",  winVP: 100, resMulti: 1.0, incMulti: 1.0, costMulti: 1.0,  desc: "100 VP · Standard" },
+      hard:    { label: "💀 Hard",    winVP: 100, resMulti: 0.5, incMulti: 0.7, costMulti: 1.4,  desc: "100 VP · Teuer & wenig Res." },
+    };
+    function getWinVP(gs) { return (MODES[gs?.gameMode] || MODES.normal).winVP; }
+    function getMode(gs) { return MODES[gs?.gameMode] || MODES.normal; }
 
     const BUILDINGS = [
       { id: "farm", name: "Farm", icon: "🏡", levels: [
@@ -70,14 +76,6 @@
       ]},
     ];
 
-    
-    const BUILD_PREREQ = {
-      hafen:["markt","mine"],
-      tempel:["farm","mine"],
-      burg:["markt","farm"],
-      uni:["markt","tempel"]
-    };
-
     // Mehrfach-Bauen: Kostenmultiplikator pro zusätzlichem Gebäude in dieser Runde
     const BUILD_MULTI_MULT = [1, 1.6, 2.3]; // 1. Bau normal, 2. Bau teurer, 3. Bau am teuersten
     const MAX_BUILDS_PER_ROUND = 3;
@@ -87,8 +85,8 @@
       return out;
     }
 
-    // Finanzamt-Schwelle: ab diesem Gesamtvermögen kann das Finanzamt zuschlagen (vorher 4 — jetzt höher)
-    const FINANZAMT_MIN_VERMOEGEN = 8;
+    // Finanzamt-Schwelle: ab diesem Gesamtvermögen kann das Finanzamt zuschlagen
+    const FINANZAMT_MIN_VERMOEGEN = 15;
 
     // Räuber — kein VP, aber klaut beim Rundenende
     const RAEUBER_LEVELS = [
@@ -113,18 +111,27 @@
     // ── HELPERS ──────────────────────────────────────────────────────────────
     function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
-    function randomResources(idx) {
-      const sets = [
-        {Holz:2, Stein:1, Getreide:2, Gold:0},
-        {Holz:3, Stein:1, Getreide:1, Gold:0},
-        {Holz:1, Stein:2, Getreide:2, Gold:0},
-        {Holz:2, Stein:2, Getreide:1, Gold:0}
+    function randomResources(idx, gameMode) {
+      idx = idx || 0;
+      const m = (MODES[gameMode] || MODES.normal).resMulti;
+      const off = [
+        { Holz: 0, Stein: 0, Getreide: 0 },
+        { Holz: 1, Stein: -1, Getreide: 1 },
+        { Holz: -1, Stein: 1, Getreide: -1 },
+        { Holz: 1, Stein: 0, Getreide: 1 },
       ];
-      return sets[Math.floor(Math.random()*sets.length)];
+      const o = off[idx] || off[0];
+      return {
+        Holz:     Math.max(1, Math.round((rnd(1,2)+o.Holz) * m)),
+        Stein:    Math.max(0, Math.round((rnd(0,2)+o.Stein) * m)),
+        Getreide: Math.max(1, Math.round((rnd(1,2)+o.Getreide) * m)),
+        Gold: 0,
+      };
     }
 
-    function calcIncome(player) {
-      const inc = { Holz: 1, Stein: 0, Getreide: 1, Gold: 0 }; // Basis: nur 1 Holz + 1 Getreide
+    function calcIncome(player, gameMode) {
+      const multi = (MODES[gameMode] || MODES.normal).incMulti;
+      const inc = { Holz: 1, Stein: 0, Getreide: 1, Gold: 0 };
       for (const [bid, lvl] of Object.entries(player.buildings)) {
         const b = BUILDINGS.find(x => x.id === bid);
         if (!b) continue;
@@ -132,6 +139,7 @@
         for (const [r,v] of Object.entries(bd.income)) inc[r] = (inc[r]||0) + v;
         if (bid === "uni") for (const r of RESOURCES) inc[r] = (inc[r]||0) + lvl;
       }
+      if (multi !== 1) for (const r of RESOURCES) inc[r] = Math.max(0, Math.round((inc[r]||0) * multi));
       return inc;
     }
 
@@ -154,15 +162,15 @@
       return r;
     }
 
-    function applyIncome(player) {
-      const inc = calcIncome(player);
+    function applyIncome(player, gameMode) {
+      const inc = calcIncome(player, gameMode);
       const res = {...player.resources};
       for (const [r,v] of Object.entries(inc)) res[r] = (res[r]||0) + v;
       return {...player, resources: res};
     }
 
-    function incSummary(player) {
-      const inc = calcIncome(player);
+    function incSummary(player, gameMode) {
+      const inc = calcIncome(player, gameMode);
       return Object.entries(inc).filter(([,v])=>v>0).map(([r,v])=>"+"+v+RES_ICONS[r]).join(" ");
     }
 
@@ -174,22 +182,24 @@
     }
 
     // Spielstand initialisieren — alle Spieler gleichzeitig aktiv
-    function initGameState(players) {
+    function initGameState(players, gameMode) {
+      const mode = gameMode || "schnell";
       const ps = players.map((p, i) => ({
         ...p,
-        resources: randomResources(i),
+        resources: randomResources(i, mode),
         buildings: {},
         ready: false,
-        pendingBuilds: [], // [{bid, level, cost}] — bis zu 3 pro Runde, je teurer
-        pendingRaeuber: null, // { target: idx, level: 1-3 } — geplanter Überfall
+        pendingBuilds: [],
+        pendingRaeuber: null,
       }));
       return {
         players: ps,
         round: 1,
         phase: "playing",
-        log: ["Runde 1 beginnt — alle spielen gleichzeitig!"],
+        gameMode: mode,
+        log: ["Runde 1 beginnt — alle spielen gleichzeitig! Ziel: " + (mode === "normal" ? WIN_VP_NORMAL : WIN_VP_QUICKPLAY) + " VP"],
         chat: [],
-        tradeOffers: [], // Array von offenen Handelsangeboten
+        tradeOffers: [],
         winner: null,
       };
     }
@@ -307,6 +317,68 @@
       );
     }
 
+    // ── KI ───────────────────────────────────────────────────────────────
+    function runAI(gs, aiIdx) {
+      const humanIdx = aiIdx === 0 ? 1 : 0;
+      const mode = getMode(gs);
+      let p = { ...gs.players[aiIdx], resources: { ...gs.players[aiIdx].resources }, buildings: { ...gs.players[aiIdx].buildings } };
+
+      // 1. Bank-Tausch: Überschuss in Gold umwandeln
+      const hasHafen = (p.buildings["hafen"] || 0) > 0;
+      for (let t = 0; t < 6; t++) {
+        let traded = false;
+        for (const trade of BANK_TRADES.filter(x => x.get === "Gold")) {
+          const rate = hasHafen ? 2 : trade.amt;
+          if ((p.resources[trade.give] || 0) >= rate + 2) {
+            p.resources = { ...p.resources };
+            p.resources[trade.give] -= rate;
+            p.resources["Gold"] = (p.resources["Gold"] || 0) + 1;
+            traded = true; break;
+          }
+        }
+        if (!traded) break;
+      }
+
+      // 2. Gierig bauen — bestes VP/Kosten-Verhältnis
+      const pending = [];
+      for (let attempt = 0; attempt < MAX_BUILDS_PER_ROUND; attempt++) {
+        let best = null, bestScore = -1;
+        for (const b of BUILDINGS) {
+          const plannedForThis = pending.filter(pb => pb.bid === b.id).length;
+          const cur = (p.buildings[b.id] || 0) + plannedForThis;
+          if (cur >= 3) continue;
+          const bd = b.levels[cur];
+          const mult = BUILD_MULTI_MULT[pending.length] || BUILD_MULTI_MULT[BUILD_MULTI_MULT.length - 1];
+          const cost = scaleCost(bd.cost, mult * mode.costMulti);
+          if (!canAfford(p.resources, cost)) continue;
+          const incVal = Object.values(bd.income).reduce((s, v) => s + v, 0);
+          const costVal = Math.max(1, Object.values(cost).reduce((s, v) => s + v, 0));
+          const score = (bd.vp * 3 + incVal * 2) / costVal;
+          if (score > bestScore) { bestScore = score; best = { b, cur, cost }; }
+        }
+        if (!best) break;
+        p.resources = deduct(p.resources, best.cost);
+        pending.push({ bid: best.b.id, level: best.cur + 1, cost: best.cost });
+      }
+      p.pendingBuilds = pending;
+
+      // 3. Überfall wenn Spieler reich ist (35% Chance)
+      const humanRes = RESOURCES.reduce((s, r) => s + (gs.players[humanIdx].resources[r] || 0), 0);
+      if (!p.pendingRaeuber && humanRes >= 6 && Math.random() < 0.35) {
+        for (let lvl = RAEUBER_LEVELS.length; lvl >= 1; lvl--) {
+          const rd = RAEUBER_LEVELS[lvl - 1];
+          if (canAfford(p.resources, rd.cost)) {
+            p.resources = deduct(p.resources, rd.cost);
+            p.pendingRaeuber = { target: humanIdx, level: lvl };
+            break;
+          }
+        }
+      }
+
+      p.ready = true;
+      return p;
+    }
+
     // ── APP ──────────────────────────────────────────────────────────────────
     function App() {
       const [screen, setScreen] = useState("home");
@@ -318,7 +390,9 @@
       const [gs, setGs] = useState(null);
       const [error, setError] = useState("");
       const [loading, setLoading] = useState(false);
-      const [feedback, setFeedback] = useState(""); // success/info feedback
+      const [feedback, setFeedback] = useState("");
+      const [isSolo, setIsSolo] = useState(false);
+      const [soloMode, setSoloMode] = useState("normal");
 
       // Local UI
       const [panel, setPanel] = useState(null);
@@ -433,7 +507,21 @@
 
       async function push(newGs) {
         setGs(newGs);
-        await sb.current.updateRoom(codeRef.current, newGs);
+        if (!isSolo) await sb.current.updateRoom(codeRef.current, newGs);
+      }
+
+      async function startSolo() {
+        if (!myName.trim()) { setError("Bitte Namen eingeben"); return; }
+        const players = [
+          { name: myName.trim(), color: PLAYER_COLORS[0] },
+          { name: "KI 🤖", color: PLAYER_COLORS[1] },
+        ];
+        const state = initGameState(players, soloMode);
+        setIsSolo(true);
+        setMyIndex(0);
+        setIsHost(true);
+        setGs(state);
+        setScreen("game");
       }
 
       function addLog(g, msg) { return {...g, log:[msg,...(g.log||[])].slice(0,60)}; }
@@ -446,7 +534,7 @@
         setLoading(true); setError(""); setFeedback("Raum wird erstellt…");
         try {
           const code = generateRoomCode();
-          const lobby = { phase:"lobby", players:[{name:myName.trim(), color:PLAYER_COLORS[0]}], log:[], chat:[], tradeOffers:[], winner:null };
+          const lobby = { phase:"lobby", gameMode:"schnell", players:[{name:myName.trim(), color:PLAYER_COLORS[0]}], log:[], chat:[], tradeOffers:[], winner:null };
           await sb.current.createRoom(code, lobby);
           codeRef.current = code;
           setRoomCode(code); setMyIndex(0); setIsHost(true); setGs(lobby);
@@ -470,7 +558,7 @@
           const room = await sb.current.getRoom(code);
           if (!room) { setError("❌ Raum " + code + " nicht gefunden"); setFeedback(""); setLoading(false); return; }
           if (room.state.phase !== "lobby") { setError("⏳ Spiel in Raum " + code + " läuft bereits"); setFeedback(""); setLoading(false); return; }
-          if (room.state.players.length >= 4) { setError("🚫 Raum " + code + " ist voll (4/4)"); setFeedback(""); setLoading(false); return; }
+          if (room.state.players.length >= 10) { setError("🚫 Raum " + code + " ist voll (10/10)"); setFeedback(""); setLoading(false); return; }
           const idx = room.state.players.length;
           const newPs = [...room.state.players, {name:myName.trim(), color:PLAYER_COLORS[idx]}];
           const newGs = {...room.state, players:newPs};
@@ -489,7 +577,7 @@
 
       async function startGame() {
         if (!gs || gs.players.length < 2) { setError("Mind. 2 Spieler"); return; }
-        await push(initGameState(gs.players));
+        await push(initGameState(gs.players, gs.gameMode));
       }
 
       // ── GAME ACTIONS ───────────────────────────────────────────────────────
@@ -504,11 +592,9 @@
         const alreadyPlannedForThis = pending.filter(pb => pb.bid === bid).length;
         const cur = (me.buildings[bid] || 0) + alreadyPlannedForThis;
         if (!b || cur >= 3) return;
-        const reqs = BUILD_PREREQ[bid];
-        if(reqs && !reqs.every(r => (me.buildings[r]||0)>0)) { alert("Voraussetzungen fehlen: "+reqs.join(", ")); return; }
         const bd = b.levels[cur]; // next level
         const mult = BUILD_MULTI_MULT[pending.length] || BUILD_MULTI_MULT[BUILD_MULTI_MULT.length-1];
-        const scaledCost = scaleCost(bd.cost, mult);
+        const scaledCost = scaleCost(bd.cost, mult * getMode(gs).costMulti);
         if (!canAfford(me.resources, scaledCost)) return;
         const newPlayers = [...gs.players];
         newPlayers[myIndex] = {
@@ -655,6 +741,11 @@
         setScreen("home"); setGs(null); setMyIndex(null); setIsHost(false); setRoomCode(""); setJoinCode("");
       }
 
+      async function setGameMode(mode) {
+        if (!isHost || !gs || gs.gameMode === mode) return;
+        await push({...gs, gameMode: mode});
+      }
+
       async function leaveRoom() {
         if (myIndex === null || !gs) return;
         if (isHost) {
@@ -684,7 +775,7 @@
       async function restartGame() {
         setMenuOpen(false);
         if (!gs) return;
-        await push(initGameState(gs.players));
+        await push(initGameState(gs.players, gs.gameMode));
       }
 
       async function returnToLobby() {
@@ -709,13 +800,20 @@
           await push({...gs, players: newPlayers});
           return;
         }
-        // Fetch latest state to avoid race conditions
-        const fresh = await sb.current.getRoom(codeRef.current);
-        const freshGs = fresh ? fresh.state : gs;
+        // Fetch latest state to avoid race conditions (skip in solo)
+        const fresh = isSolo ? null : await sb.current.getRoom(codeRef.current);
+        const freshGs = (!isSolo && fresh) ? fresh.state : gs;
         const freshMe = freshGs.players[myIndex];
         if (!freshMe || freshMe.ready) return;
         const newPlayers = [...freshGs.players];
         newPlayers[myIndex] = {...freshMe, ready: true};
+
+        // Solo: KI zieht sofort
+        if (isSolo) {
+          const aiIdx = myIndex === 0 ? 1 : 0;
+          newPlayers[aiIdx] = runAI(freshGs, aiIdx);
+        }
+
         let g = {...freshGs, players: newPlayers};
         g = addLog(g, freshMe.name+" ist bereit ✓");
 
@@ -725,13 +823,14 @@
           const raidLogs = [];
           // Resolve round: apply pending builds + income
           // First apply builds and income
+          const gMode = freshGs.gameMode;
           let resolved = newPlayers.map(p => {
             let np = {...p, ready: false, buildings: {...(p.buildings||{})}};
             for (const pb of (np.pendingBuilds||[])) {
               np.buildings[pb.bid] = pb.level;
             }
             np.pendingBuilds = [];
-            np = applyIncome(np);
+            np = applyIncome(np, gMode);
             return np;
           });
 
@@ -813,17 +912,18 @@
           }
 
           // Check for winner
+          const winVP = getWinVP(freshGs);
           let winner = null;
           for (let i = 0; i < resolved.length; i++) {
-            if (calcVP(resolved[i]) >= WIN_VP) { winner = i; break; }
+            if (calcVP(resolved[i]) >= winVP) { winner = i; break; }
           }
 
           const newRound = gs.round + 1;
-          const incLogs = resolved.map(p => p.name+": "+incSummary(p)).join(" | ");
+          const incLogs = resolved.map(p => p.name+": "+incSummary(p, gMode)).join(" | ");
           g = {...g, players: resolved, round: newRound, phase: winner!==null?"finished":"playing", winner};
           g = addLog(g, "🔔 Runde "+gs.round+" abgeschlossen! Einnahmen: "+incLogs);
           for (const rl of raidLogs) g = addLog(g, rl);
-          if (winner !== null) g = addLog(g, "🏆 "+resolved[winner].name+" gewinnt mit "+calcVP(resolved[winner])+" VP!");
+          if (winner !== null) g = addLog(g, "🏆 "+resolved[winner].name+" gewinnt mit "+calcVP(resolved[winner])+" VP (Ziel: "+winVP+")!");
         }
 
         await push(g);
@@ -862,9 +962,30 @@
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>DEIN NAME</div>
               <input style={ipt} value={myName} onChange={e=>{setMyName(e.target.value);setError("");setFeedback("");}} placeholder="Name eingeben…" maxLength={16}/>
             </div>
-            <button onClick={createRoom} disabled={loading} style={{width:"100%",background:"#f4a261",border:"none",borderRadius:12,color:"#1b1f2e",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:12}}>
+            <button onClick={createRoom} disabled={loading} style={{width:"100%",background:"#f4a261",border:"none",borderRadius:12,color:"#1b1f2e",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:8}}>
               🏠 Neuen Raum erstellen
             </button>
+
+            {/* Solo vs KI */}
+            <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:12}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>SOLO VS KI</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
+                {Object.entries(MODES).map(([id,m])=>(
+                  <button key={id} onClick={()=>setSoloMode(id)}
+                    style={{
+                      background:soloMode===id?"#9b59b622":"#1b1f2e",
+                      border:"2px solid "+(soloMode===id?"#9b59b6":"#333"),
+                      borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",
+                    }}>
+                    <div style={{color:"#fff",fontWeight:700,fontSize:11}}>{m.label}</div>
+                    <div style={{color:soloMode===id?"#9b59b6":"#444",fontSize:10}}>{m.winVP} VP</div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={startSolo} disabled={loading} style={{width:"100%",background:"#9b59b6",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer"}}>
+                🤖 Solo gegen KI spielen
+              </button>
+            </div>
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px"}}>
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>RAUM BEITRETEN</div>
               <input style={{...ipt,textTransform:"uppercase",letterSpacing:4,textAlign:"center",fontSize:22,fontWeight:700,marginBottom:10}}
@@ -909,7 +1030,7 @@
               </div>
             </div>
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
-              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>SPIELER ({(gs&&gs.players?gs.players.length:0)}/4)</div>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>SPIELER ({(gs&&gs.players?gs.players.length:0)}/10)</div>
               {(gs&&gs.players?gs.players:[]).map((p,i)=>(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<gs.players.length-1?"1px solid #333":"none"}}>
                   <div style={{width:10,height:10,borderRadius:"50%",background:p.color}}/>
@@ -925,6 +1046,29 @@
                 </div>
               ))}
             </div>
+            {/* Game mode toggle */}
+            <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:12}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>SPIELMODUS</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                {Object.entries(MODES).map(([id, m])=>{
+                  const active = (gs?.gameMode||"schnell")===id;
+                  return (
+                    <button key={id} onClick={()=>setGameMode(id)}
+                      disabled={!isHost}
+                      style={{
+                        background:active?"#2a9d8f22":"#1b1f2e",
+                        border:"2px solid "+(active?"#2a9d8f":"#333"),
+                        borderRadius:10,padding:"10px 6px",cursor:isHost?"pointer":"default",textAlign:"center",
+                      }}>
+                      <div style={{color:"#fff",fontWeight:700,fontSize:12}}>{m.label}</div>
+                      <div style={{color:active?"#2a9d8f":"#555",fontSize:10,marginTop:2}}>{m.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {!isHost&&<div style={{color:"#444",fontSize:11,textAlign:"center",marginTop:6}}>Nur der Host kann den Modus ändern</div>}
+            </div>
+
             {isHost
               ? <button onClick={startGame} disabled={!gs||gs.players.length<2}
                   style={{width:"100%",background:gs&&gs.players.length>=2?"#2a9d8f":"#333",border:"none",borderRadius:12,color:"#fff",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:10}}>
@@ -970,7 +1114,7 @@
                   </div>
                 ))}
               </div>
-              <button onClick={()=>{clearSession();setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");setJoinCode("");setError("");}}
+              <button onClick={()=>{clearSession();setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");setJoinCode("");setError("");setIsSolo(false);}}
                 style={{width:"100%",background:"#f4a261",border:"none",borderRadius:12,color:"#1b1f2e",padding:14,fontSize:16,fontWeight:800,cursor:"pointer"}}>
                 Zurück zum Menü
               </button>
@@ -986,7 +1130,7 @@
         </div>
       );
 
-      const myInc = calcIncome(me);
+      const myInc = calcIncome(me, gs.gameMode);
       const hasHafen = (me.buildings["hafen"]||0) > 0;
       const readyCount = gs.players.filter(p=>p.ready).length;
       const myOffers = (gs.tradeOffers||[]).filter(o=>o.from===myIndex);
@@ -1014,11 +1158,11 @@
                     style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#fff",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
                     🔄 Neues Spiel starten
                   </button>
-                  <button onClick={returnToLobby}
+                  {!isSolo && <button onClick={returnToLobby}
                     style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#fff",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
                     🚪 Zurück zur Lobby
-                  </button>
-                  <button onClick={()=>{if(!window.confirm("Spiel wirklich verlassen?"))return;clearSession();setMenuOpen(false);setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");}}
+                  </button>}
+                  <button onClick={()=>{if(!isSolo&&!window.confirm("Spiel wirklich verlassen?"))return;clearSession();setMenuOpen(false);setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");setIsSolo(false);}}
                     style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#e76f51",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
                     ✕ Spiel verlassen
                   </button>
@@ -1099,9 +1243,9 @@
                   <div key={i} style={{background:i===myIndex?p.color+"22":"#252a3a",border:"2px solid "+(i===myIndex?p.color:"#2e2e2e"),borderRadius:10,padding:"8px 4px",textAlign:"center"}}>
                     <div style={{color:p.color,fontSize:10,fontWeight:700}}>{(p.name.length>6?p.name.slice(0,6)+"…":p.name)}</div>
                     <div style={{color:"#fff",fontSize:20,fontWeight:900}}>{vp}</div>
-                    <div style={{color:"#444",fontSize:10}}>/ {WIN_VP} VP</div>
+                    <div style={{color:"#444",fontSize:10}}>/ {getWinVP(gs)} VP</div>
                     <div style={{marginTop:3,height:3,background:"#333",borderRadius:2,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:Math.min(100,vp/WIN_VP*100)+"%",background:p.color}}/>
+                      <div style={{height:"100%",width:Math.min(100,vp/getWinVP(gs)*100)+"%",background:p.color}}/>
                     </div>
                     {p.ready && <div style={{color:"#2a9d8f",fontSize:10,marginTop:2}}>✓ bereit</div>}
                   </div>
@@ -1149,7 +1293,7 @@
               <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
                 <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>AKTIONEN</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
-                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handeln",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"},{key:"raid",label:"🗡️ Räuber",col:"#e76f51"}].map(({key,label,col})=>(
+                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handeln",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"},{key:"raid",label:"🏛️ Finanzamt",col:"#e76f51"}].map(({key,label,col})=>(
                     <button key={key}
                       onClick={()=>{setPanel(p=>p===key?null:key); if(key!=="bank"){setBankRes(null);} if(key!=="player"){resetTrade();}}}
                       style={{background:panel===key?col:"#3a3f52",border:"2px solid "+(panel===key?col:"transparent"),borderRadius:8,color:"#fff",padding:"11px 6px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
@@ -1245,7 +1389,7 @@
                         const nxt = cur+1;
                         const bd = maxed?b.levels[2]:b.levels[nxt-1];
                         const mult = BUILD_MULTI_MULT[pending.length] || BUILD_MULTI_MULT[BUILD_MULTI_MULT.length-1];
-                        const scaledCost = maxed ? bd.cost : scaleCost(bd.cost, mult);
+                        const scaledCost = maxed ? bd.cost : scaleCost(bd.cost, mult * getMode(gs).costMulti);
                         const atLimit = pending.length >= MAX_BUILDS_PER_ROUND;
                         const ok = !maxed && !atLimit && canAfford(me.resources, scaledCost);
                         return (
@@ -1279,7 +1423,7 @@
             {/* Raid panel */}
             {panel==="raid"&&!me.ready&&(
               <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-                <div style={{color:"#e76f51",fontSize:11,letterSpacing:1,marginBottom:8}}>🗡️ RÄUBER — klaut am Rundenende, keine Siegpunkte</div>
+                <div style={{color:"#e76f51",fontSize:11,letterSpacing:1,marginBottom:8}}>🏛️ FINANZAMT — klaut am Rundenende, keine Siegpunkte</div>
                 {me.pendingRaeuber && (
                   <div style={{background:"#1b1f2e",borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                     <span style={{color:"#e76f51",fontSize:13}}>🗡️ Überfall auf {gs.players[me.pendingRaeuber.target]?.name} (Stufe {me.pendingRaeuber.level}) geplant</span>
