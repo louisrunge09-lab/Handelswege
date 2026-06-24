@@ -169,18 +169,19 @@
           await fetch(SUPABASE_URL + "/rest/v1/game_rooms?id=eq." + id, { method: "PATCH", headers: h, body: JSON.stringify({ state }) });
         },
         subscribe(id, cb) {
-          const wsUrl = SUPABASE_URL.replace("https://", "wss://") + "/realtime/v1/websocket?apikey=" + SUPABASE_ANON_KEY + "&vsn=1.0.0";
-          const ws = new WebSocket(wsUrl);
-          let hb;
-          ws.onopen = () => {
-            ws.send(JSON.stringify({ topic: "realtime:public:game_rooms:id=eq." + id, event: "phx_join", payload: {}, ref: "1" }));
-            hb = setInterval(() => { if (ws.readyState === 1) ws.send(JSON.stringify({ topic: "phoenix", event: "heartbeat", payload: {}, ref: "hb" })); }, 20000);
-          };
-          ws.onmessage = e => {
-            const msg = JSON.parse(e.data);
-            if (msg.event === "UPDATE" && msg.payload && msg.payload.record && msg.payload.record.state) cb(msg.payload.record.state);
-          };
-          return () => { clearInterval(hb); ws.close(); };
+          // Polling every 2s as reliable fallback
+          let lastJson = "";
+          const poll = setInterval(async () => {
+            try {
+              const r = await fetch(SUPABASE_URL + "/rest/v1/game_rooms?id=eq." + id + "&select=state", { headers: h });
+              const d = await r.json();
+              if (d[0]) {
+                const j = JSON.stringify(d[0].state);
+                if (j !== lastJson) { lastJson = j; cb(d[0].state); }
+              }
+            } catch(e) {}
+          }, 2000);
+          return () => clearInterval(poll);
         },
       };
     }
@@ -205,6 +206,38 @@
       const sb = useRef(makeSB());
       const codeRef = useRef(null);
       const unsubRef = useRef(null);
+
+      // Reload protection: restore session from localStorage
+      useEffect(() => {
+        const saved = localStorage.getItem("handelswege_session");
+        if (saved) {
+          try {
+            const { code, idx, name } = JSON.parse(saved);
+            sb.current.getRoom(code).then(room => {
+              if (room && room.state && room.state.players && room.state.players[idx]) {
+                codeRef.current = code;
+                setRoomCode(code);
+                setMyIndex(idx);
+                setMyName(name || room.state.players[idx].name);
+                setIsHost(idx === 0);
+                setGs(room.state);
+                setScreen(room.state.phase === "lobby" ? "lobby" : "game");
+                subscribe(code);
+              } else {
+                localStorage.removeItem("handelswege_session");
+              }
+            });
+          } catch(e) { localStorage.removeItem("handelswege_session"); }
+        }
+      }, []);
+
+      function saveSession(code, idx, name) {
+        localStorage.setItem("handelswege_session", JSON.stringify({ code, idx, name }));
+      }
+
+      function clearSession() {
+        localStorage.removeItem("handelswege_session");
+      }
 
       function subscribe(code) {
         if (unsubRef.current) unsubRef.current();
@@ -238,6 +271,7 @@
         await sb.current.createRoom(code, lobby);
         codeRef.current = code;
         setRoomCode(code); setMyIndex(0); setIsHost(true); setGs(lobby);
+        saveSession(code, 0, myName.trim());
         subscribe(code); setScreen("lobby"); setLoading(false);
       }
 
@@ -256,6 +290,7 @@
         codeRef.current = code;
         setRoomCode(code); setMyIndex(idx); setIsHost(false);
         await sb.current.updateRoom(code, newGs);
+        saveSession(code, idx, myName.trim());
         setGs(newGs); subscribe(code); setScreen("lobby"); setLoading(false);
       }
 
@@ -451,7 +486,7 @@
                   </div>
                 ))}
               </div>
-              <button onClick={() => { setScreen("home"); setGs(null); setMyIndex(null); setIsHost(false); setRoomCode(""); setJoinCode(""); setError(""); }}
+              <button onClick={() => { clearSession(); setScreen("home"); setGs(null); setMyIndex(null); setIsHost(false); setRoomCode(""); setJoinCode(""); setError(""); }}
                 style={{ width: "100%", background: "#f4a261", border: "none", borderRadius: 12, color: "#1b1f2e", padding: 14, fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
                 Zurück zum Menü
               </button>
