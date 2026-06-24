@@ -462,6 +462,16 @@
         await push({...gs, players: newPlayers});
       }
 
+      async function kickPlayer(idx) {
+        if (!isHost || !gs || idx === myIndex) return;
+        const newPlayers = gs.players.filter((_, i) => i !== idx);
+        // Reassign colors
+        const recolored = newPlayers.map((p, i) => ({...p, color: PLAYER_COLORS[i]}));
+        let g = addLog({...gs, players: recolored, tradeOffers: (gs.tradeOffers||[]).filter(o => o.from !== idx && o.to !== idx)},
+          gs.players[idx].name + " wurde gekickt");
+        await push(g);
+      }
+
       async function restartGame() {
         setMenuOpen(false);
         if (!gs) return;
@@ -662,7 +672,21 @@
             <h2 style={{color:"#f4a261",textAlign:"center",fontSize:26,fontWeight:900,marginBottom:6}}>Warteraum</h2>
             <div style={{textAlign:"center",marginBottom:24}}>
               <div style={{color:"#555",fontSize:12,marginBottom:8}}>Code für andere Spieler:</div>
-              <div style={{color:"#fff",fontSize:44,fontWeight:900,letterSpacing:10,background:"#252a3a",borderRadius:12,padding:"14px 0"}}>{roomCode}</div>
+              <div style={{color:"#fff",fontSize:44,fontWeight:900,letterSpacing:10,background:"#252a3a",borderRadius:12,padding:"14px 0",marginBottom:10}}>{roomCode}</div>
+              <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+                <button onClick={()=>{navigator.clipboard.writeText(roomCode);}}
+                  style={{background:"#252a3a",border:"1px solid #444",borderRadius:8,color:"#fff",padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
+                  📋 Code kopieren
+                </button>
+                <button onClick={()=>{
+                  const url = window.location.href;
+                  if(navigator.share) navigator.share({title:"Handelswege",text:"Tritt meinem Spiel bei! Code: "+roomCode,url});
+                  else navigator.clipboard.writeText(url+"?code="+roomCode);
+                }}
+                  style={{background:"#f4a261",border:"none",borderRadius:8,color:"#1b1f2e",padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:700}}>
+                  🔗 Link teilen
+                </button>
+              </div>
             </div>
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>SPIELER ({(gs&&gs.players?gs.players.length:0)}/4)</div>
@@ -672,6 +696,12 @@
                   <span style={{color:"#fff",fontWeight:i===myIndex?700:400}}>{p.name}</span>
                   {i===0&&<span style={{color:"#f4a261",fontSize:11,marginLeft:"auto"}}>Host</span>}
                   {i===myIndex&&i!==0&&<span style={{color:"#2a9d8f",fontSize:11,marginLeft:"auto"}}>Du</span>}
+                  {isHost&&i!==0&&i!==myIndex&&(
+                    <button onClick={()=>kickPlayer(i)}
+                      style={{background:"#e76f51",border:"none",borderRadius:6,color:"#fff",padding:"3px 8px",fontSize:11,cursor:"pointer",marginLeft:"auto"}}>
+                      Kick
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -761,7 +791,31 @@
                     ✕ Spiel verlassen
                   </button>
                   <div style={{borderTop:"1px solid #333",margin:"6px 0"}}/>
-                  <div style={{color:"#555",fontSize:11,padding:"4px 12px"}}>{roomCode} · {gs.players.length} Spieler</div>
+                  <button onClick={()=>{navigator.clipboard.writeText(roomCode);setMenuOpen(false);}}
+                    style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#aaa",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
+                    📋 Code kopieren: {roomCode}
+                  </button>
+                  <button onClick={()=>{
+                    const url = window.location.origin+window.location.pathname;
+                    if(navigator.share) navigator.share({title:"Handelswege",text:"Tritt meinem Spiel bei! Code: "+roomCode,url});
+                    else navigator.clipboard.writeText(url);
+                    setMenuOpen(false);
+                  }}
+                    style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#aaa",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
+                    🔗 Link teilen
+                  </button>
+                  {isHost && gs.players.filter((_,i)=>i!==myIndex).length>0 && (
+                    <div>
+                      <div style={{borderTop:"1px solid #333",margin:"6px 0"}}/>
+                      <div style={{color:"#555",fontSize:10,letterSpacing:1,padding:"4px 12px"}}>SPIELER KICKEN</div>
+                      {gs.players.map((p,i)=>i!==myIndex&&(
+                        <button key={i} onClick={()=>{kickPlayer(i);setMenuOpen(false);}}
+                          style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#e76f51",padding:"8px 12px",fontSize:13,textAlign:"left",cursor:"pointer",display:"block"}}>
+                          ✕ {p.name} kicken
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
