@@ -21,7 +21,7 @@
     const SUPABASE_URL = "https://rejrcuapcendtviezvfc.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlanJjdWFwY2VuZHR2aWV6dmZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNjQwNzcsImV4cCI6MjA5Nzg0MDA3N30.ru33fqL5plRCZRwzEe8qQTJ25Bv3MstXt-wi5Y2IqI0";
 
-    const VERSION = "v1.8";
+    const VERSION = "v2.0";
     const PLAYER_COLORS = ["#f4a261", "#457b9d", "#2a9d8f", "#e76f51"];
     const RESOURCES = ["Holz", "Stein", "Getreide", "Gold"];
     const RES_ICONS = { Holz: "🪵", Stein: "🪨", Getreide: "🌾", Gold: "🪙" };
@@ -29,44 +29,44 @@
 
     const BUILDINGS = [
       { id: "farm", name: "Farm", icon: "🏡", levels: [
-        { cost: { Holz: 2, Getreide: 1 }, income: { Getreide: 2 }, vp: 1, desc: "+2 Getreide/Rd" },
-        { cost: { Holz: 5, Getreide: 4, Gold: 3 }, income: { Getreide: 4 }, vp: 2, desc: "+4 Getreide/Rd" },
-        { cost: { Holz: 8, Getreide: 7, Gold: 6 }, income: { Getreide: 7 }, vp: 3, desc: "+7 Getreide/Rd" },
+        { cost: { Holz: 3, Getreide: 2 }, income: { Getreide: 2 }, vp: 1, desc: "+2 Getreide/Rd" },
+        { cost: { Holz: 7, Getreide: 5, Gold: 4 }, income: { Getreide: 4 }, vp: 2, desc: "+4 Getreide/Rd" },
+        { cost: { Holz: 12, Getreide: 9, Gold: 8 }, income: { Getreide: 7 }, vp: 3, desc: "+7 Getreide/Rd" },
       ]},
       { id: "sawmill", name: "Sägewerk", icon: "🪚", levels: [
-        { cost: { Stein: 2, Gold: 1 }, income: { Holz: 3 }, vp: 1, desc: "+3 Holz/Rd" },
-        { cost: { Stein: 5, Gold: 4 }, income: { Holz: 5 }, vp: 2, desc: "+5 Holz/Rd" },
-        { cost: { Stein: 8, Gold: 7 }, income: { Holz: 8 }, vp: 3, desc: "+8 Holz/Rd" },
+        { cost: { Stein: 3, Gold: 2 }, income: { Holz: 3 }, vp: 1, desc: "+3 Holz/Rd" },
+        { cost: { Stein: 7, Gold: 5 }, income: { Holz: 5 }, vp: 2, desc: "+5 Holz/Rd" },
+        { cost: { Stein: 12, Gold: 9 }, income: { Holz: 8 }, vp: 3, desc: "+8 Holz/Rd" },
       ]},
       { id: "mine", name: "Mine", icon: "⛏️", levels: [
         { cost: { Holz: 1, Stein: 1 }, income: { Stein: 2, Gold: 1 }, vp: 1, desc: "+2 Stein +1 Gold/Rd" },
-        { cost: { Holz: 4, Stein: 5, Gold: 3 }, income: { Stein: 3, Gold: 2 }, vp: 2, desc: "+3 Stein +2 Gold/Rd" },
-        { cost: { Holz: 6, Stein: 8, Gold: 5 }, income: { Stein: 5, Gold: 3 }, vp: 3, desc: "+5 Stein +3 Gold/Rd" },
+        { cost: { Holz: 5, Stein: 7, Gold: 4 }, income: { Stein: 3, Gold: 2 }, vp: 2, desc: "+3 Stein +2 Gold/Rd" },
+        { cost: { Holz: 8, Stein: 11, Gold: 7 }, income: { Stein: 5, Gold: 3 }, vp: 3, desc: "+5 Stein +3 Gold/Rd" },
       ]},
       { id: "markt", name: "Markt", icon: "🏪", levels: [
-        { cost: { Holz: 2, Gold: 1 }, income: { Gold: 2 }, vp: 2, desc: "+2 Gold/Rd" },
-        { cost: { Holz: 5, Gold: 5 }, income: { Gold: 3 }, vp: 3, desc: "+3 Gold/Rd" },
-        { cost: { Holz: 8, Getreide: 5, Gold: 8 }, income: { Gold: 5 }, vp: 4, desc: "+5 Gold/Rd" },
+        { cost: { Holz: 3, Gold: 2 }, income: { Gold: 2 }, vp: 2, desc: "+2 Gold/Rd" },
+        { cost: { Holz: 7, Gold: 6 }, income: { Gold: 3 }, vp: 3, desc: "+3 Gold/Rd" },
+        { cost: { Holz: 11, Getreide: 7, Gold: 10 }, income: { Gold: 5 }, vp: 4, desc: "+5 Gold/Rd" },
       ]},
       { id: "hafen", name: "Hafen", icon: "⚓", levels: [
-        { cost: { Holz: 3, Gold: 2 }, income: { Gold: 1 }, vp: 3, desc: "+1 Gold/Rd, Bank 2:1" },
-        { cost: { Holz: 6, Gold: 6 }, income: { Gold: 2 }, vp: 4, desc: "+2 Gold/Rd, Bank 2:1" },
-        { cost: { Holz: 9, Gold: 9 }, income: { Gold: 3 }, vp: 5, desc: "+3 Gold/Rd, Bank 2:1" },
+        { cost: { Holz: 4, Gold: 3 }, income: { Gold: 1 }, vp: 3, desc: "+1 Gold/Rd, Bank 2:1" },
+        { cost: { Holz: 8, Gold: 7 }, income: { Gold: 2 }, vp: 4, desc: "+2 Gold/Rd, Bank 2:1" },
+        { cost: { Holz: 13, Gold: 11 }, income: { Gold: 3 }, vp: 5, desc: "+3 Gold/Rd, Bank 2:1" },
       ]},
       { id: "tempel", name: "Tempel", icon: "⛩️", levels: [
-        { cost: { Stein: 3, Getreide: 2 }, income: {}, vp: 5, desc: "+5 VP" },
-        { cost: { Stein: 7, Gold: 5, Getreide: 5 }, income: {}, vp: 8, desc: "+8 VP" },
-        { cost: { Stein: 10, Gold: 8, Getreide: 8 }, income: {}, vp: 12, desc: "+12 VP" },
+        { cost: { Stein: 4, Getreide: 3 }, income: {}, vp: 5, desc: "+5 VP" },
+        { cost: { Stein: 9, Gold: 6, Getreide: 7 }, income: {}, vp: 8, desc: "+8 VP" },
+        { cost: { Stein: 14, Gold: 11, Getreide: 11 }, income: {}, vp: 12, desc: "+12 VP" },
       ]},
       { id: "uni", name: "Universität", icon: "🎓", levels: [
-        { cost: { Gold: 2, Getreide: 3 }, income: {}, vp: 5, desc: "+5 VP, +1 alle/Rd" },
-        { cost: { Gold: 6, Getreide: 6, Stein: 4 }, income: {}, vp: 7, desc: "+7 VP, +2 alle/Rd" },
-        { cost: { Gold: 10, Getreide: 10, Stein: 7 }, income: {}, vp: 10, desc: "+10 VP, +3 alle/Rd" },
+        { cost: { Gold: 3, Getreide: 4 }, income: {}, vp: 5, desc: "+5 VP, +1 alle/Rd" },
+        { cost: { Gold: 8, Getreide: 8, Stein: 5 }, income: {}, vp: 7, desc: "+7 VP, +2 alle/Rd" },
+        { cost: { Gold: 13, Getreide: 13, Stein: 9 }, income: {}, vp: 10, desc: "+10 VP, +3 alle/Rd" },
       ]},
       { id: "burg", name: "Burg", icon: "🏰", levels: [
-        { cost: { Stein: 3, Getreide: 2 }, income: {}, vp: 6, desc: "+6 VP" },
-        { cost: { Stein: 7, Gold: 5, Getreide: 4 }, income: {}, vp: 9, desc: "+9 VP" },
-        { cost: { Stein: 11, Gold: 8, Getreide: 7 }, income: {}, vp: 13, desc: "+13 VP" },
+        { cost: { Stein: 4, Getreide: 3 }, income: {}, vp: 6, desc: "+6 VP" },
+        { cost: { Stein: 9, Gold: 7, Getreide: 6 }, income: {}, vp: 9, desc: "+9 VP" },
+        { cost: { Stein: 14, Gold: 11, Getreide: 9 }, income: {}, vp: 13, desc: "+13 VP" },
       ]},
     ];
 
@@ -200,16 +200,54 @@
           const poll = setInterval(async () => {
             try {
               const r = await fetch(SUPABASE_URL+"/rest/v1/game_rooms?id=eq."+id+"&select=state", {headers:h});
+              if (!r.ok) return;
               const d = await r.json();
               if (d[0]) {
                 const j = JSON.stringify(d[0].state);
                 if (j !== lastJson) { lastJson = j; cb(d[0].state); }
               }
             } catch(e) {}
-          }, 2000);
+          }, 1500);
           return () => clearInterval(poll);
         },
       };
+    }
+
+    // ── COPY BUTTON ──────────────────────────────────────────────────────────
+    function CopyButton({text, label}) {
+      const [copied, setCopied] = React.useState(false);
+      function doCopy() {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }
+      return (
+        <button onClick={doCopy}
+          style={{background: copied ? "#2a9d8f" : "#252a3a", border: "1px solid " + (copied ? "#2a9d8f" : "#444"),
+            borderRadius:8, color: copied ? "#fff" : "#fff", padding:"8px 14px", fontSize:13, cursor:"pointer",
+            fontWeight:600, transition:"all 0.2s"}}>
+          {copied ? "✅ Kopiert!" : label}
+        </button>
+      );
+    }
+
+    function CopyMenuButton({text, label, onDone}) {
+      const [copied, setCopied] = React.useState(false);
+      function doCopy() {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => { setCopied(false); if(onDone) onDone(); }, 1500);
+        });
+      }
+      return (
+        <button onClick={doCopy}
+          style={{width:"100%", background: copied ? "#0e2a1a" : "none", border:"none", borderRadius:8,
+            color: copied ? "#2a9d8f" : "#aaa", padding:"10px 12px", fontSize:14, textAlign:"left",
+            cursor:"pointer", display:"block", transition:"all 0.2s"}}>
+          {copied ? "✅ Kopiert!" : label}
+        </button>
+      );
     }
 
     // ── APP ──────────────────────────────────────────────────────────────────
@@ -234,6 +272,7 @@
       const [ptWant, setPtWant]   = useState({Holz:0,Stein:0,Getreide:0,Gold:0});
       const [chatMsg, setChatMsg] = useState("");
       const [menuOpen, setMenuOpen] = useState(false);
+      const [raidAlert, setRaidAlert] = useState(null); // {msg, type} shown as popup
       const chatEndRef = useRef(null);
 
       const sb = useRef(makeSB());
@@ -301,6 +340,18 @@
         if (chatEndRef.current) chatEndRef.current.scrollIntoView({behavior:"smooth"});
       }, [gs && gs.chat && gs.chat.length]);
 
+      // Show raid alert popup when log contains attack on me
+      useEffect(() => {
+        if (!gs || !gs.log || !myName) return;
+        const latest = gs.log[0];
+        if (!latest) return;
+        const isMyRaid = latest.includes(myName+"!") && (latest.includes("🗡️") || latest.includes("⚔️"));
+        if (isMyRaid) {
+          setRaidAlert({msg: latest, type: latest.startsWith("⚔️") ? "bandit" : "raid"});
+          setTimeout(() => setRaidAlert(null), 5000);
+        }
+      }, [gs && gs.log && gs.log[0]]);
+
       function subscribe(code) {
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = sb.current.subscribe(code, newState => setGs(newState));
@@ -320,6 +371,7 @@
       // ── LOBBY ──────────────────────────────────────────────────────────────
       async function createRoom() {
         if (!myName.trim()) { setError("Bitte Namen eingeben"); setFeedback(""); return; }
+        if (loading) return; // prevent double-tap
         setLoading(true); setError(""); setFeedback("Raum wird erstellt…");
         try {
           const code = generateRoomCode();
@@ -593,78 +645,91 @@
           // Resolve round: apply pending builds + income
           // First apply builds and income
           let resolved = newPlayers.map(p => {
-            let np = {...p, ready: false};
+            let np = {...p, ready: false, buildings: {...(p.buildings||{})}};
             if (np.pendingBuild) {
               const {bid, level} = np.pendingBuild;
-              np.buildings = {...np.buildings, [bid]: level};
+              np.buildings[bid] = level;
               np.pendingBuild = null;
             }
             np = applyIncome(np);
             return np;
           });
 
-          // Apply raids — steal random resources
+          // Apply raids — raider gets SOME, rest disappears (chaos tax)
           newPlayers.forEach((p, i) => {
             if (!p.pendingRaeuber) return;
             const {target, level} = p.pendingRaeuber;
             const rd = RAEUBER_LEVELS[level-1];
             const victim = resolved[target];
-            // Find resources victim actually has
             const available = RESOURCES.filter(r => (victim.resources[r]||0) > 0);
             if (available.length === 0) {
-              raidLogs.push("🗡️ "+p.name+" überfällt "+victim.name+" — aber nichts zu stehlen!");
+              raidLogs.push("🗡️ "+p.name+" überfällt "+victim.name+" — aber die Vorräte sind leer!");
+              resolved[i] = {...resolved[i], pendingRaeuber: null};
               return;
             }
-            let stolen = {};
-            let stealCount = rd.steal;
-            for (let s = 0; s < stealCount; s++) {
-              const still = RESOURCES.filter(r => (victim.resources[r]||0) - (stolen[r]||0) > 0);
+            // Steal MORE than before (level * 2 items taken from victim)
+            let totalTaken = {};
+            const takeCount = rd.steal * 2;
+            for (let s = 0; s < takeCount; s++) {
+              const still = RESOURCES.filter(r => (victim.resources[r]||0) - (totalTaken[r]||0) > 0);
               if (still.length === 0) break;
               const pick = still[Math.floor(Math.random()*still.length)];
-              stolen[pick] = (stolen[pick]||0)+1;
+              totalTaken[pick] = (totalTaken[pick]||0)+1;
             }
-            // Transfer
+            // Raider only gets ~60% — rest is lost in the chaos
+            let raiderGets = {};
+            let lost = {};
+            for (const [r,v] of Object.entries(totalTaken)) {
+              const gets = Math.max(0, Math.floor(v * 0.6));
+              const loses = v - gets;
+              if (gets > 0) raiderGets[r] = gets;
+              if (loses > 0) lost[r] = loses;
+            }
             let victimRes = {...victim.resources};
             let raiderRes = {...resolved[i].resources};
-            for (const [r,v] of Object.entries(stolen)) {
-              victimRes[r] = Math.max(0, (victimRes[r]||0)-v);
-              raiderRes[r] = (raiderRes[r]||0)+v;
-            }
+            for (const [r,v] of Object.entries(totalTaken)) victimRes[r] = Math.max(0, (victimRes[r]||0)-v);
+            for (const [r,v] of Object.entries(raiderGets)) raiderRes[r] = (raiderRes[r]||0)+v;
             resolved[target] = {...victim, resources: victimRes};
             resolved[i] = {...resolved[i], resources: raiderRes, pendingRaeuber: null};
-            const stolenStr = Object.entries(stolen).map(([r,v])=>v+RES_ICONS[r]).join(" ");
-            raidLogs.push("🗡️ "+p.name+" klaut von "+victim.name+": "+stolenStr);
+            const takenStr = Object.entries(totalTaken).map(([r,v])=>v+RES_ICONS[r]).join(" ");
+            const getsStr  = Object.entries(raiderGets).map(([r,v])=>v+RES_ICONS[r]).join(" ") || "nichts";
+            const lostStr  = Object.entries(lost).map(([r,v])=>v+RES_ICONS[r]).join(" ") || "nichts";
+            raidLogs.push("🗡️ "+p.name+" überfällt "+victim.name+"! Nimmt "+takenStr+" — bekommt "+getsStr+", "+lostStr+" verschwinden");
           });
           // Clear pending raiders that found no victims
           resolved = resolved.map(p => ({...p, pendingRaeuber: null}));
 
-          // Random bandit event — 30% chance each round, hits player(s) with most resources
-          const banditRoll = Math.random();
-          if (banditRoll < 0.30) {
-            // Find who has the most total resources
-            const totals = resolved.map(p => RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0));
-            const maxTotal = Math.max(...totals);
-            // All players with > 6 resources are at risk
-            resolved = resolved.map((p, i) => {
-              const total = totals[i];
-              if (total < 5) return p; // poor players are safe
-              // Chance scales with wealth: more resources = higher chance
-              const chance = Math.min(0.8, total / 20);
-              if (Math.random() > chance) return p;
-              // Lose 30-60% of each resource randomly
+          // Random bandit event — 25% chance each round, hits ONE random player with resources
+          if (Math.random() < 0.25) {
+            // Only players with at least 4 resources total are targets
+            const eligible = resolved.map((p,i) => ({
+              i, total: RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0)
+            })).filter(x => x.total >= 4);
+
+            if (eligible.length > 0) {
+              // Pick one random victim (weighted by wealth)
+              const totalWeight = eligible.reduce((s,x)=>s+x.total, 0);
+              let pick = Math.random() * totalWeight;
+              let victim = eligible[0];
+              for (const e of eligible) {
+                pick -= e.total;
+                if (pick <= 0) { victim = e; break; }
+              }
+
+              const p = resolved[victim.i];
               const newRes = {...p.resources};
               let lost = {};
               for (const r of RESOURCES) {
                 if ((newRes[r]||0) <= 0) continue;
-                const lose = Math.floor((newRes[r]||0) * (0.3 + Math.random()*0.3));
+                const lose = Math.ceil((newRes[r]||0) * (0.4 + Math.random()*0.3));
                 if (lose > 0) { lost[r] = lose; newRes[r] = Math.max(0, newRes[r]-lose); }
               }
               if (Object.keys(lost).length > 0) {
                 const lostStr = Object.entries(lost).map(([r,v])=>v+RES_ICONS[r]).join(" ");
-                raidLogs.push("⚔️ Räuberüberfall! "+p.name+" verliert "+lostStr);
+                raidLogs.push("⚔️ RÄUBERÜBERFALL auf "+p.name+"! Verliert "+lostStr+" — alles weg!");
+                resolved[victim.i] = {...p, resources: newRes};
               }
-              return {...p, resources: newRes};
-            });
+            }
           }
 
           // Check for winner
@@ -758,10 +823,7 @@
               <div style={{color:"#555",fontSize:12,marginBottom:8}}>Code für andere Spieler:</div>
               <div style={{color:"#fff",fontSize:44,fontWeight:900,letterSpacing:10,background:"#252a3a",borderRadius:12,padding:"14px 0",marginBottom:10}}>{roomCode}</div>
               <div style={{display:"flex",gap:8,justifyContent:"center"}}>
-                <button onClick={()=>{navigator.clipboard.writeText(roomCode);}}
-                  style={{background:"#252a3a",border:"1px solid #444",borderRadius:8,color:"#fff",padding:"8px 14px",fontSize:13,cursor:"pointer",fontWeight:600}}>
-                  📋 Code kopieren
-                </button>
+                <CopyButton text={roomCode} label="📋 Code kopieren" />
                 <button onClick={()=>{
                   const url = window.location.href;
                   if(navigator.share) navigator.share({title:"Handelswege",text:"Tritt meinem Spiel bei! Code: "+roomCode,url});
@@ -868,7 +930,7 @@
                 ☰
               </button>
               <span style={{color:"#f4a261",fontWeight:800,fontSize:14}}>Runde {gs.round} · {roomCode}</span>
-              <span style={{color:"#444",fontSize:12}}>{readyCount}/{gs.players.length} bereit</span>
+              <span style={{color:"#333",fontSize:10}}>{readyCount}/{gs.players.length} bereit · {VERSION}</span>
 
               {/* Dropdown menu */}
               {menuOpen && (
@@ -887,10 +949,7 @@
                     ✕ Spiel verlassen
                   </button>
                   <div style={{borderTop:"1px solid #333",margin:"6px 0"}}/>
-                  <button onClick={()=>{navigator.clipboard.writeText(roomCode);setMenuOpen(false);}}
-                    style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#aaa",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
-                    📋 Code kopieren: {roomCode}
-                  </button>
+                  <CopyMenuButton text={roomCode} label={"📋 Code kopieren: "+roomCode} onDone={()=>setMenuOpen(false)} />
                   <button onClick={()=>{
                     const url = window.location.origin+window.location.pathname;
                     if(navigator.share) navigator.share({title:"Handelswege",text:"Tritt meinem Spiel bei! Code: "+roomCode,url});
@@ -916,12 +975,31 @@
               )}
             </div>
 
-            {/* Version badge */}
-            <div style={{position:"fixed",bottom:10,left:10,color:"#333",fontSize:10,letterSpacing:1,zIndex:50,pointerEvents:"none"}}>
-              {VERSION}
-            </div>
+            {/* Raid alert popup */}
+            {raidAlert && (
+              <div onClick={()=>setRaidAlert(null)} style={{
+                position:"fixed", inset:0, zIndex:300,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                background:"rgba(0,0,0,0.7)", padding:20,
+              }}>
+                <div style={{
+                  background: raidAlert.type==="bandit" ? "#2a0a0a" : "#1a0a2a",
+                  border: "3px solid " + (raidAlert.type==="bandit" ? "#e76f51" : "#9b59b6"),
+                  borderRadius:16, padding:"28px 24px", maxWidth:360, width:"100%", textAlign:"center",
+                  boxShadow:"0 0 40px " + (raidAlert.type==="bandit" ? "#e76f5166" : "#9b59b666"),
+                }}>
+                  <div style={{fontSize:52, marginBottom:12}}>
+                    {raidAlert.type==="bandit" ? "⚔️" : "🗡️"}
+                  </div>
+                  <div style={{color:"#fff", fontSize:15, fontWeight:700, lineHeight:1.6, marginBottom:16}}>
+                    {raidAlert.msg}
+                  </div>
+                  <div style={{color:"#555", fontSize:12}}>Tippen zum Schließen</div>
+                </div>
+              </div>
+            )}
 
-          {/* Menu overlay to close on outside click */}
+            {/* Menu overlay to close on outside click */}
             {menuOpen && (
               <div onClick={()=>setMenuOpen(false)}
                 style={{position:"fixed",inset:0,zIndex:199}}/>
