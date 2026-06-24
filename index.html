@@ -220,6 +220,7 @@
       const [ptOffer, setPtOffer] = useState({Holz:0,Stein:0,Getreide:0,Gold:0});
       const [ptWant, setPtWant]   = useState({Holz:0,Stein:0,Getreide:0,Gold:0});
       const [chatMsg, setChatMsg] = useState("");
+      const [menuOpen, setMenuOpen] = useState(false);
       const chatEndRef = useRef(null);
 
       const sb = useRef(makeSB());
@@ -448,6 +449,24 @@
         const newPlayers = [...gs.players];
         newPlayers[myIndex] = {...me, resources: refunded, pendingRaeuber: null};
         await push({...gs, players: newPlayers});
+      }
+
+      async function restartGame() {
+        setMenuOpen(false);
+        if (!gs) return;
+        await push(initGameState(gs.players));
+      }
+
+      async function returnToLobby() {
+        setMenuOpen(false);
+        if (!gs) return;
+        const lobby = {
+          phase: "lobby",
+          players: gs.players.map(p => ({name: p.name, color: p.color})),
+          log: [], chat: gs.chat || [], tradeOffers: [], winner: null,
+        };
+        await push(lobby);
+        setScreen("lobby");
       }
 
       // Mark/unmark ready
@@ -706,11 +725,41 @@
           <div style={{flex:1,minWidth:0,padding:"12px 12px 40px",maxWidth:620}}>
 
             {/* Header */}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <span style={{color:"#444",fontSize:12}}>Runde {gs.round} · {roomCode}</span>
-              <span style={{color:"#f4a261",fontWeight:800,fontSize:14}}>Alle spielen gleichzeitig</span>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,position:"relative"}}>
+              <button onClick={()=>setMenuOpen(m=>!m)}
+                style={{background:"#252a3a",border:"none",borderRadius:8,color:"#fff",padding:"7px 12px",fontSize:18,cursor:"pointer",lineHeight:1}}>
+                ☰
+              </button>
+              <span style={{color:"#f4a261",fontWeight:800,fontSize:14}}>Runde {gs.round} · {roomCode}</span>
               <span style={{color:"#444",fontSize:12}}>{readyCount}/{gs.players.length} bereit</span>
+
+              {/* Dropdown menu */}
+              {menuOpen && (
+                <div style={{position:"absolute",top:40,left:0,background:"#252a3a",borderRadius:12,padding:8,zIndex:200,minWidth:200,boxShadow:"0 8px 24px rgba(0,0,0,0.5)"}}>
+                  <div style={{color:"#555",fontSize:10,letterSpacing:1,padding:"4px 10px 8px"}}>MENÜ</div>
+                  <button onClick={restartGame}
+                    style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#fff",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
+                    🔄 Neues Spiel starten
+                  </button>
+                  <button onClick={returnToLobby}
+                    style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#fff",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
+                    🚪 Zurück zur Lobby
+                  </button>
+                  <button onClick={()=>{clearSession();setMenuOpen(false);setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");}}
+                    style={{width:"100%",background:"none",border:"none",borderRadius:8,color:"#e76f51",padding:"10px 12px",fontSize:14,textAlign:"left",cursor:"pointer",display:"block"}}>
+                    ✕ Spiel verlassen
+                  </button>
+                  <div style={{borderTop:"1px solid #333",margin:"6px 0"}}/>
+                  <div style={{color:"#555",fontSize:11,padding:"4px 12px"}}>{roomCode} · {gs.players.length} Spieler</div>
+                </div>
+              )}
             </div>
+
+            {/* Menu overlay to close on outside click */}
+            {menuOpen && (
+              <div onClick={()=>setMenuOpen(false)}
+                style={{position:"fixed",inset:0,zIndex:199}}/>
+            )}
 
             {/* VP board */}
             <div style={{display:"grid",gridTemplateColumns:"repeat("+gs.players.length+",1fr)",gap:6,marginBottom:12}}>
