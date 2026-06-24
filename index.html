@@ -2060,11 +2060,22 @@
                 ))}
               </div>
 
-              <button onClick={()=>{clearSession();setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");setJoinCode("");setError("");setIsSolo(false);}}
-                className="cta-orange"
-                style={{width:"100%",background:"linear-gradient(135deg,#f4a261,#e76f51)",border:"none",borderRadius:12,color:"#1b1f2e",padding:"15px 0",fontSize:16,fontWeight:900,cursor:"pointer"}}>
-                🏠 Zurück zum Menü
-              </button>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                {isSolo
+                  ? <button onClick={()=>restartGame()} className="cta-purple"
+                      style={{background:"linear-gradient(135deg,#9b59b6,#7d3c98)",border:"none",borderRadius:12,color:"#fff",padding:"14px 0",fontSize:14,fontWeight:900,cursor:"pointer"}}>
+                      🔄 Nochmal spielen
+                    </button>
+                  : <button onClick={()=>returnToLobby()} className="cta-teal"
+                      style={{background:"linear-gradient(135deg,#2a9d8f,#1d7a70)",border:"none",borderRadius:12,color:"#fff",padding:"14px 0",fontSize:14,fontWeight:900,cursor:"pointer"}}>
+                      🏠 Neue Lobby
+                    </button>
+                }
+                <button onClick={()=>{clearSession();setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");setJoinCode("");setError("");setIsSolo(false);}}
+                  style={{background:"rgba(0,0,0,0.2)",border:"1px solid #252b3d",borderRadius:12,color:"#607088",padding:"14px 0",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+                  ← Hauptmenü
+                </button>
+              </div>
             </div>
           </div>
         );
