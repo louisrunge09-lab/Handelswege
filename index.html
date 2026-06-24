@@ -981,6 +981,32 @@
         if (!me || ptTarget === null) return;
         if (!canAfford(me.resources, ptOffer)) { setError("Nicht genug Ressourcen"); return; }
         if (Object.values(ptOffer).every(v=>v===0) && Object.values(ptWant).every(v=>v===0)) return;
+        const os = Object.entries(ptOffer).filter(([,v])=>v>0).map(([r,v])=>v+(RES_ICONS[r]||r)).join(" ")||"nichts";
+        const ws = Object.entries(ptWant).filter(([,v])=>v>0).map(([r,v])=>v+(RES_ICONS[r]||r)).join(" ")||"nichts";
+        // Solo: KI antwortet sofort
+        if (isSolo && ptTarget !== myIndex) {
+          const aiP = gs.players[ptTarget];
+          const givesTotal = Object.values(ptOffer).reduce((s,v)=>s+v,0);
+          const wantsTotal = Object.values(ptWant).reduce((s,v)=>s+v,0);
+          const fair = givesTotal >= wantsTotal * 0.75;
+          const affordable = canAfford(aiP.resources, ptWant);
+          const newPlayers = [...gs.players];
+          let g;
+          if (fair && affordable) {
+            let myRes = {...me.resources};
+            for (const [r,v] of Object.entries(ptWant)) myRes[r] = (myRes[r]||0)+v;
+            let aiRes = deduct({...aiP.resources}, ptWant);
+            for (const [r,v] of Object.entries(ptOffer)) aiRes[r] = (aiRes[r]||0)+v;
+            newPlayers[myIndex] = {...me, resources: myRes};
+            newPlayers[ptTarget] = {...aiP, resources: aiRes};
+            g = addLog({...gs, players:newPlayers}, "✅ "+aiP.name+" nimmt Handel an: "+os+" ↔ "+ws);
+          } else {
+            g = addLog({...gs}, "❌ "+aiP.name+" lehnt Handel ab");
+          }
+          setPanel(null); resetTrade();
+          await push(g);
+          return;
+        }
         const offer = {
           id: Date.now(),
           from: myIndex, fromName: me.name, fromColor: me.color,
@@ -1090,6 +1116,20 @@
         const already = (gs.allianceOffers||[]).find(o=>o.from===myIndex&&o.to===targetIdx);
         const alreadyAllied = (gs.alliances||[]).find(a=>(a.a===myIndex&&a.b===targetIdx)||(a.a===targetIdx&&a.b===myIndex));
         if (already || alreadyAllied) return;
+        // Solo: KI antwortet sofort
+        if (isSolo && targetIdx !== myIndex) {
+          const aiP = gs.players[targetIdx];
+          const accepts = Math.random() < 0.5;
+          let g;
+          if (accepts) {
+            const newAlliances = [...(gs.alliances||[]), {a:myIndex, b:targetIdx, endsAfter: gs.round+3}];
+            g = addLog({...gs, alliances:newAlliances}, "🤝 "+me.name+" & "+aiP.name+" sind Verbündete! (3 Runden)");
+          } else {
+            g = addLog({...gs}, "❌ "+aiP.name+" lehnt Allianz ab");
+          }
+          await push(g);
+          return;
+        }
         const newOffers = [...(gs.allianceOffers||[]), {from:myIndex, to:targetIdx}];
         let g = addLog({...gs, allianceOffers:newOffers}, "🤝 "+me.name+" bietet "+gs.players[targetIdx].name+" eine Allianz an");
         await push(g);
