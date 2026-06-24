@@ -346,6 +346,7 @@
         allianceOffers: [],
         winner: null,
         stats: { buildsTotal: {}, raidsReceived: {}, roundsLed: {}, techsBought: {} },
+        soloTradeAttempts: {},
       };
     }
 
@@ -983,25 +984,34 @@
         if (Object.values(ptOffer).every(v=>v===0) && Object.values(ptWant).every(v=>v===0)) return;
         const os = Object.entries(ptOffer).filter(([,v])=>v>0).map(([r,v])=>v+(RES_ICONS[r]||r)).join(" ")||"nichts";
         const ws = Object.entries(ptWant).filter(([,v])=>v>0).map(([r,v])=>v+(RES_ICONS[r]||r)).join(" ")||"nichts";
-        // Solo: KI antwortet sofort
+        // Solo: KI antwortet sofort mit strategischer Bewertung
         if (isSolo && ptTarget !== myIndex) {
           const aiP = gs.players[ptTarget];
-          const givesTotal = Object.values(ptOffer).reduce((s,v)=>s+v,0);
-          const wantsTotal = Object.values(ptWant).reduce((s,v)=>s+v,0);
-          const fair = givesTotal >= wantsTotal * 0.75;
-          const affordable = canAfford(aiP.resources, ptWant);
-          const newPlayers = [...gs.players];
+          const attempts = (gs.soloTradeAttempts||{})[myIndex] || 0;
+          const newAttempts = {...(gs.soloTradeAttempts||{}), [myIndex]: attempts + 1};
           let g;
-          if (fair && affordable) {
-            let myRes = {...me.resources};
-            for (const [r,v] of Object.entries(ptWant)) myRes[r] = (myRes[r]||0)+v;
-            let aiRes = deduct({...aiP.resources}, ptWant);
-            for (const [r,v] of Object.entries(ptOffer)) aiRes[r] = (aiRes[r]||0)+v;
-            newPlayers[myIndex] = {...me, resources: myRes};
-            newPlayers[ptTarget] = {...aiP, resources: aiRes};
-            g = addLog({...gs, players:newPlayers}, "✅ "+aiP.name+" nimmt Handel an: "+os+" ↔ "+ws);
+          if (attempts >= 2) {
+            g = addLog({...gs, soloTradeAttempts: newAttempts}, "😤 "+aiP.name+" ignoriert weitere Angebote diese Runde");
+          } else if (!canAfford(aiP.resources, ptWant)) {
+            g = addLog({...gs, soloTradeAttempts: newAttempts}, "❌ "+aiP.name+" kann sich das nicht leisten");
           } else {
-            g = addLog({...gs}, "❌ "+aiP.name+" lehnt Handel ab");
+            // KI bewertet nach eigenem Bedarf: knappe Ressourcen sind wertvoller
+            const aiNeeds = {};
+            for (const r of RESOURCES) aiNeeds[r] = 1 / ((aiP.resources[r]||0) + 1);
+            const valueGets = Object.entries(ptOffer).reduce((s,[r,v])=>s+v*(aiNeeds[r]||0),0);
+            const valueGives = Object.entries(ptWant).reduce((s,[r,v])=>s+v*(aiNeeds[r]||0),0);
+            const newPlayers = [...gs.players];
+            if (valueGets > valueGives) {
+              let myRes = {...me.resources};
+              for (const [r,v] of Object.entries(ptWant)) myRes[r] = (myRes[r]||0)+v;
+              let aiRes = deduct({...aiP.resources}, ptWant);
+              for (const [r,v] of Object.entries(ptOffer)) aiRes[r] = (aiRes[r]||0)+v;
+              newPlayers[myIndex] = {...me, resources: myRes};
+              newPlayers[ptTarget] = {...aiP, resources: aiRes};
+              g = addLog({...gs, players:newPlayers, soloTradeAttempts: newAttempts}, "✅ "+aiP.name+" nimmt Handel an: "+os+" ↔ "+ws);
+            } else {
+              g = addLog({...gs, soloTradeAttempts: newAttempts}, "❌ "+aiP.name+" lehnt ab — kein gutes Angebot");
+            }
           }
           setPanel(null); resetTrade();
           await push(g);
@@ -1420,7 +1430,7 @@
 
           const newRound = gs.round + 1;
           const incLogs = resolved.map(p => p.name+": "+incSummary(p, gMode)).join(" | ");
-          g = {...g, players: resolved, round: newRound, phase: winner!==null?"finished":"playing", winner, alliances: activeAlliances, allianceOffers: freshGs.allianceOffers||[], stats: newStats};
+          g = {...g, players: resolved, round: newRound, phase: winner!==null?"finished":"playing", winner, alliances: activeAlliances, allianceOffers: freshGs.allianceOffers||[], stats: newStats, soloTradeAttempts: {}};
           g = addLog(g, "🔔 Runde "+gs.round+" abgeschlossen! Einnahmen: "+incLogs);
           for (const rl of raidLogs) g = addLog(g, rl);
           if (winner !== null) g = addLog(g, "🏆 "+resolved[winner].name+" gewinnt mit "+calcVP(resolved[winner])+" VP (Ziel: "+winVP+")!");
