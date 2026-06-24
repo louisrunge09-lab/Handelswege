@@ -450,17 +450,30 @@
         await push({...gs, players: newPlayers});
       }
 
-      // Mark ready — when all ready, round resolves
+      // Mark/unmark ready
       async function markReady() {
-        if (!me || me.ready) return;
-        const newPlayers = [...gs.players];
-        newPlayers[myIndex] = {...me, ready: true};
-        let g = {...gs, players: newPlayers};
-        g = addLog(g, me.name+" ist bereit ✓");
+        if (!me) return;
+        if (me.ready) {
+          // Unmark ready
+          const newPlayers = [...gs.players];
+          newPlayers[myIndex] = {...me, ready: false};
+          await push({...gs, players: newPlayers});
+          return;
+        }
+        // Fetch latest state to avoid race conditions
+        const fresh = await sb.current.getRoom(codeRef.current);
+        const freshGs = fresh ? fresh.state : gs;
+        const freshMe = freshGs.players[myIndex];
+        if (!freshMe || freshMe.ready) return;
+        const newPlayers = [...freshGs.players];
+        newPlayers[myIndex] = {...freshMe, ready: true};
+        let g = {...freshGs, players: newPlayers};
+        g = addLog(g, freshMe.name+" ist bereit ✓");
 
         // Check if all ready
         const allReady = newPlayers.every(p => p.ready);
         if (allReady) {
+          const raidLogs = [];
           // Resolve round: apply pending builds + income
           // First apply builds and income
           let resolved = newPlayers.map(p => {
@@ -475,7 +488,6 @@
           });
 
           // Apply raids — steal random resources
-          const raidLogs = [];
           newPlayers.forEach((p, i) => {
             if (!p.pendingRaeuber) return;
             const {target, level} = p.pendingRaeuber;
@@ -689,8 +701,9 @@
       const offersForMe = (gs.tradeOffers||[]).filter(o=>o.to===myIndex);
 
       return (
-        <div style={{minHeight:"100vh",background:"#1b1f2e",padding:"12px 12px 40px"}}>
-          <div style={{maxWidth:580,margin:"0 auto"}}>
+        <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",flexDirection:"row",alignItems:"flex-start"}}>
+          {/* Main game column */}
+          <div style={{flex:1,minWidth:0,padding:"12px 12px 40px",maxWidth:620}}>
 
             {/* Header */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -953,9 +966,9 @@
             )}
 
             {/* Ready button */}
-            <button onClick={markReady} disabled={me.ready}
-              style={{width:"100%",background:me.ready?"#1a3a1a":"#2a9d8f",border:"2px solid "+(me.ready?"#2a9d8f":"#2a9d8f"),borderRadius:12,color:me.ready?"#2a9d8f":"#fff",padding:15,fontSize:16,fontWeight:800,cursor:me.ready?"default":"pointer",marginBottom:10}}>
-              {me.ready?"✓ Du bist bereit ("+readyCount+"/"+gs.players.length+")":"✓ Runde abschließen ("+readyCount+"/"+gs.players.length+" bereit)"}
+            <button onClick={markReady}
+              style={{width:"100%",background:me.ready?"#1a3a1a":"#2a9d8f",border:"2px solid "+(me.ready?"#2a9d8f":"#2a9d8f"),borderRadius:12,color:me.ready?"#2a9d8f":"#fff",padding:15,fontSize:16,fontWeight:800,cursor:"pointer",marginBottom:10}}>
+              {me.ready?"↩ Bereit aufheben ("+readyCount+"/"+gs.players.length+")":"✓ Runde abschließen ("+readyCount+"/"+gs.players.length+" bereit)"}
             </button>
 
             {/* Log */}
@@ -965,29 +978,38 @@
               ))}
             </div>
 
-            {/* Chat */}
-            <div style={{background:"#252a3a",borderRadius:12}}>
-              <div style={{color:"#555",fontSize:11,letterSpacing:1,padding:"10px 14px 4px"}}>CHAT</div>
-              <div style={{maxHeight:120,overflowY:"auto",padding:"4px 14px 8px"}}>
-                {(gs.chat||[]).length===0&&<div style={{color:"#444",fontSize:12,padding:"4px 0"}}>Noch keine Nachrichten…</div>}
-                {(gs.chat||[]).map((m,i)=>(
-                  <div key={i} style={{marginBottom:4}}>
-                    <span style={{color:m.color,fontWeight:700,fontSize:12}}>{m.name}: </span>
-                    <span style={{color:"#bbb",fontSize:12}}>{m.text}</span>
-                  </div>
-                ))}
-                <div ref={chatEndRef}/>
-              </div>
-              <div style={{display:"flex",gap:8,padding:"0 10px 10px"}}>
-                <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)}
-                  onKeyDown={e=>e.key==="Enter"&&sendChat()}
-                  placeholder="Nachricht…" maxLength={80}
-                  style={{flex:1,background:"#1b1f2e",border:"1px solid #333",borderRadius:8,padding:"8px 10px",color:"#fff",fontSize:13,outline:"none"}}/>
-                <button onClick={sendChat} style={{background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"8px 14px",fontWeight:700,fontSize:14,cursor:"pointer"}}>➤</button>
-              </div>
-            </div>
+          </div>{/* end main column */}
 
+          {/* Chat sidebar */}
+          <div style={{
+            width:280, minWidth:240, maxWidth:320,
+            height:"100vh", position:"sticky", top:0,
+            background:"#1a1e2c", borderLeft:"1px solid #252a3a",
+            display:"flex", flexDirection:"column",
+          }}>
+            <div style={{color:"#555",fontSize:11,letterSpacing:1,padding:"14px 14px 6px",borderBottom:"1px solid #252a3a"}}>
+              💬 CHAT
+            </div>
+            <div style={{flex:1,overflowY:"auto",padding:"8px 14px"}}>
+              {(gs.chat||[]).length===0&&<div style={{color:"#444",fontSize:13,padding:"8px 0"}}>Noch keine Nachrichten…</div>}
+              {(gs.chat||[]).map((m,i)=>(
+                <div key={i} style={{marginBottom:8}}>
+                  <span style={{color:m.color,fontWeight:700,fontSize:13}}>{m.name}</span>
+                  <span style={{color:"#444",fontSize:11}}> · </span>
+                  <span style={{color:"#bbb",fontSize:13}}>{m.text}</span>
+                </div>
+              ))}
+              <div ref={chatEndRef}/>
+            </div>
+            <div style={{padding:"8px 10px 12px",borderTop:"1px solid #252a3a",display:"flex",gap:6}}>
+              <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&sendChat()}
+                placeholder="Nachricht…" maxLength={80}
+                style={{flex:1,background:"#252a3a",border:"1px solid #333",borderRadius:8,padding:"10px 12px",color:"#fff",fontSize:14,outline:"none"}}/>
+              <button onClick={sendChat} style={{background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"10px 14px",fontWeight:700,fontSize:16,cursor:"pointer"}}>➤</button>
+            </div>
           </div>
+
         </div>
       );
     }
