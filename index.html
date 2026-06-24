@@ -1903,7 +1903,7 @@
               <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
                 <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>AKTIONEN</div>
                 <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr 1fr":"1fr 1fr 1fr 1fr 1fr",gap:5}}>
-                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handel",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"},{key:"raid",label:"🏛️ Finanzamt",col:"#e76f51"},{key:"tech",label:"🔬 Technik",col:"#2a9d8f"}].map(({key,label,col})=>(
+                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handel",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"},{key:"raid",label:"⚔️ Überfall",col:"#e76f51"},{key:"tech",label:"🔬 Technik",col:"#2a9d8f"}].map(({key,label,col})=>(
                     <button key={key}
                       onClick={()=>{setPanel(p=>p===key?null:key); if(key!=="bank"){setBankRes(null);} if(key!=="player"){resetTrade();}}}
                       style={{background:panel===key?col:"#3a3f52",border:"2px solid "+(panel===key?col:"transparent"),borderRadius:8,color:"#fff",padding:"11px 6px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
@@ -2072,7 +2072,7 @@
             {/* Raid panel */}
             {panel==="raid"&&!me.ready&&(
               <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-                <div style={{color:"#e76f51",fontSize:11,letterSpacing:1,marginBottom:8}}>🏛️ FINANZAMT & SABOTAGE</div>
+                <div style={{color:"#e76f51",fontSize:11,letterSpacing:1,marginBottom:8}}>⚔️ ÜBERFALL & SABOTAGE</div>
                 {/* Tab switcher */}
                 <div style={{display:"flex",gap:6,marginBottom:10}}>
                   {[{id:"raid",label:"🗡️ Überfall"},{id:"sabotage",label:"💣 Sabotage"}].map(t=>(
