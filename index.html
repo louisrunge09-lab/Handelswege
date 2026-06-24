@@ -462,6 +462,33 @@
         await push({...gs, players: newPlayers});
       }
 
+      async function deleteRoom() {
+        if (!isHost || !gs) return;
+        // Delete from supabase
+        const h = {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+        };
+        await fetch(SUPABASE_URL+"/rest/v1/game_rooms?id=eq."+codeRef.current, {method:"DELETE", headers:h});
+        clearSession();
+        setScreen("home"); setGs(null); setMyIndex(null); setIsHost(false); setRoomCode(""); setJoinCode("");
+      }
+
+      async function leaveRoom() {
+        if (myIndex === null || !gs) return;
+        if (isHost) {
+          // Host leaving — delete the room
+          await deleteRoom();
+          return;
+        }
+        // Non-host: remove self from players
+        const newPlayers = gs.players.filter((_, i) => i !== myIndex);
+        const recolored = newPlayers.map((p, i) => ({...p, color: PLAYER_COLORS[i]}));
+        await sb.current.updateRoom(codeRef.current, {...gs, players: recolored});
+        clearSession();
+        setScreen("home"); setGs(null); setMyIndex(null); setIsHost(false); setRoomCode(""); setJoinCode("");
+      }
+
       async function kickPlayer(idx) {
         if (!isHost || !gs || idx === myIndex) return;
         const newPlayers = gs.players.filter((_, i) => i !== idx);
@@ -707,11 +734,23 @@
             </div>
             {isHost
               ? <button onClick={startGame} disabled={!gs||gs.players.length<2}
-                  style={{width:"100%",background:gs&&gs.players.length>=2?"#2a9d8f":"#333",border:"none",borderRadius:12,color:"#fff",padding:16,fontSize:16,fontWeight:900,cursor:"pointer"}}>
+                  style={{width:"100%",background:gs&&gs.players.length>=2?"#2a9d8f":"#333",border:"none",borderRadius:12,color:"#fff",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:10}}>
                   {gs&&gs.players.length>=2?"Spiel starten → "+gs.players.length+" Spieler":"Warte auf Spieler… (mind. 2)"}
                 </button>
               : <div style={{color:"#555",textAlign:"center",fontSize:14,padding:16}}>Warte auf Host…</div>
             }
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
+              <button onClick={leaveRoom}
+                style={{background:"#252a3a",border:"1px solid #444",borderRadius:10,color:"#aaa",padding:"10px",fontSize:14,cursor:"pointer",fontWeight:600}}>
+                🚪 Verlassen
+              </button>
+              {isHost && (
+                <button onClick={deleteRoom}
+                  style={{background:"#2a1010",border:"1px solid #e76f51",borderRadius:10,color:"#e76f51",padding:"10px",fontSize:14,cursor:"pointer",fontWeight:600}}>
+                  🗑 Lobby löschen
+                </button>
+              )}
+            </div>
             {error&&<div style={{color:"#e76f51",textAlign:"center",fontSize:13,marginTop:10}}>{error}</div>}
           </div>
         </div>
