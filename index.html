@@ -43,14 +43,14 @@
         { cost: { Holz: 3, Stein: 4, Gold: 2 }, income: { Stein: 5, Gold: 3 }, vp: 3, desc: "+5 Stein +3 Gold/Rd" },
       ]},
       { id: "markt", name: "Markt", icon: "🏪", levels: [
-        { cost: { Holz: 2, Gold: 1 }, income: { Gold: 3 }, vp: 2, desc: "+3 Gold/Rd" },
-        { cost: { Holz: 3, Gold: 2 }, income: { Gold: 5 }, vp: 3, desc: "+5 Gold/Rd" },
-        { cost: { Holz: 4, Getreide: 2, Gold: 3 }, income: { Gold: 8 }, vp: 4, desc: "+8 Gold/Rd" },
+        { cost: { Holz: 3, Gold: 2 }, income: { Gold: 2 }, vp: 2, desc: "+2 Gold/Rd" },
+        { cost: { Holz: 4, Gold: 3 }, income: { Gold: 3 }, vp: 3, desc: "+3 Gold/Rd" },
+        { cost: { Holz: 5, Getreide: 3, Gold: 4 }, income: { Gold: 5 }, vp: 4, desc: "+5 Gold/Rd" },
       ]},
       { id: "hafen", name: "Hafen", icon: "⚓", levels: [
-        { cost: { Holz: 3, Gold: 2 }, income: { Gold: 2 }, vp: 3, desc: "+2 Gold/Rd, Bank 1:1" },
-        { cost: { Holz: 4, Gold: 3 }, income: { Gold: 4 }, vp: 4, desc: "+4 Gold/Rd, Bank 1:1" },
-        { cost: { Holz: 5, Gold: 4 }, income: { Gold: 6 }, vp: 5, desc: "+6 Gold/Rd, Bank 1:1" },
+        { cost: { Holz: 4, Gold: 3 }, income: { Gold: 1 }, vp: 3, desc: "+1 Gold/Rd, Bank 2:1" },
+        { cost: { Holz: 5, Gold: 4 }, income: { Gold: 2 }, vp: 4, desc: "+2 Gold/Rd, Bank 2:1" },
+        { cost: { Holz: 6, Gold: 5 }, income: { Gold: 3 }, vp: 5, desc: "+3 Gold/Rd, Bank 2:1" },
       ]},
       { id: "tempel", name: "Tempel", icon: "⛩️", levels: [
         { cost: { Stein: 3, Gold: 2 }, income: {}, vp: 5, desc: "+5 VP" },
@@ -58,9 +58,9 @@
         { cost: { Stein: 5, Gold: 4, Getreide: 2 }, income: {}, vp: 12, desc: "+12 VP" },
       ]},
       { id: "uni", name: "Universität", icon: "🎓", levels: [
-        { cost: { Gold: 4, Getreide: 2 }, income: {}, vp: 5, desc: "+5 VP, +1 alle Res./Rd" },
-        { cost: { Gold: 5, Getreide: 3, Stein: 2 }, income: {}, vp: 7, desc: "+7 VP, +2 alle Res./Rd" },
-        { cost: { Gold: 7, Getreide: 4, Stein: 3 }, income: {}, vp: 10, desc: "+10 VP, +3 alle Res./Rd" },
+        { cost: { Gold: 4, Getreide: 2 }, income: {}, vp: 5, desc: "+5 VP, +1 alle/Rd" },
+        { cost: { Gold: 5, Getreide: 3, Stein: 2 }, income: {}, vp: 7, desc: "+7 VP, +2 alle/Rd" },
+        { cost: { Gold: 7, Getreide: 4, Stein: 3 }, income: {}, vp: 10, desc: "+10 VP, +3 alle/Rd" },
       ]},
       { id: "burg", name: "Burg", icon: "🏰", levels: [
         { cost: { Stein: 4, Gold: 3 }, income: {}, vp: 6, desc: "+6 VP" },
@@ -69,25 +69,21 @@
       ]},
     ];
 
-    const BANK_RATES = { Holz: 2, Stein: 2, Getreide: 3 };
+    const BANK_RATES = { Holz: 3, Stein: 3, Getreide: 4 };
 
+    // ── HELPERS ──────────────────────────────────────────────────────────────
     function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 
     function randomResources(idx) {
       idx = idx || 0;
       const off = [
-        { Holz: 0, Stein: 0, Getreide: 0, Gold: 0 },
-        { Holz: 2, Stein: -1, Getreide: 1, Gold: 1 },
-        { Holz: -1, Stein: 2, Getreide: -1, Gold: 2 },
-        { Holz: 1, Stein: 1, Getreide: 2, Gold: -1 },
+        { Holz: 0, Stein: 0, Getreide: 0 },
+        { Holz: 1, Stein: -1, Getreide: 1 },
+        { Holz: -1, Stein: 1, Getreide: -1 },
+        { Holz: 1, Stein: 0, Getreide: 1 },
       ];
       const o = off[idx] || off[0];
-      return {
-        Holz: Math.max(1, rnd(2, 5) + o.Holz),
-        Stein: Math.max(1, rnd(1, 4) + o.Stein),
-        Getreide: Math.max(1, rnd(1, 4) + o.Getreide),
-        Gold: Math.max(0, rnd(0, 3) + o.Gold),
-      };
+      return { Holz: Math.max(1, rnd(1,3)+o.Holz), Stein: Math.max(1, rnd(1,3)+o.Stein), Getreide: Math.max(1, rnd(1,3)+o.Getreide), Gold: 0 };
     }
 
     function calcIncome(player) {
@@ -95,9 +91,9 @@
       for (const [bid, lvl] of Object.entries(player.buildings)) {
         const b = BUILDINGS.find(x => x.id === bid);
         if (!b) continue;
-        const bd = b.levels[lvl - 1];
-        for (const [r, v] of Object.entries(bd.income)) inc[r] = (inc[r] || 0) + v;
-        if (bid === "uni") for (const r of RESOURCES) inc[r] = (inc[r] || 0) + lvl;
+        const bd = b.levels[lvl-1];
+        for (const [r,v] of Object.entries(bd.income)) inc[r] = (inc[r]||0) + v;
+        if (bid === "uni") for (const r of RESOURCES) inc[r] = (inc[r]||0) + lvl;
       }
       return inc;
     }
@@ -106,50 +102,62 @@
       let t = 0;
       for (const [bid, lvl] of Object.entries(player.buildings)) {
         const b = BUILDINGS.find(x => x.id === bid);
-        if (b) t += b.levels[lvl - 1].vp;
+        if (b) t += b.levels[lvl-1].vp;
       }
       return t;
     }
 
     function canAfford(res, cost) {
-      return Object.entries(cost).every(([r, v]) => (res[r] || 0) >= v);
+      return Object.entries(cost).every(([r,v]) => (res[r]||0) >= v);
     }
 
     function deduct(res, cost) {
-      const r = { ...res };
-      for (const [k, v] of Object.entries(cost)) r[k] = (r[k] || 0) - v;
+      const r = {...res};
+      for (const [k,v] of Object.entries(cost)) r[k] = (r[k]||0) - v;
       return r;
     }
 
     function applyIncome(player) {
       const inc = calcIncome(player);
-      const res = { ...player.resources };
-      for (const [r, v] of Object.entries(inc)) res[r] = (res[r] || 0) + v;
-      return { ...player, resources: res };
+      const res = {...player.resources};
+      for (const [r,v] of Object.entries(inc)) res[r] = (res[r]||0) + v;
+      return {...player, resources: res};
     }
 
     function incSummary(player) {
       const inc = calcIncome(player);
-      return Object.entries(inc).filter(([, v]) => v > 0).map(([r, v]) => "+" + v + RES_ICONS[r]).join(" ");
+      return Object.entries(inc).filter(([,v])=>v>0).map(([r,v])=>"+"+v+RES_ICONS[r]).join(" ");
     }
 
     function generateRoomCode() {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       let code = "";
-      for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random()*chars.length)];
       return code;
     }
 
+    // Spielstand initialisieren — alle Spieler gleichzeitig aktiv
     function initGameState(players) {
-      const ps = players.map((p, i) => ({ ...p, resources: randomResources(i), buildings: {} }));
-      ps[0] = applyIncome(ps[0]);
+      const ps = players.map((p, i) => ({
+        ...p,
+        resources: randomResources(i),
+        buildings: {},
+        ready: false,       // Hat Runde abgeschlossen?
+        pendingBuild: null, // { bid } — geplantes Gebäude diese Runde
+        pendingBank: null,  // { res, amt } — geplanter Bank-Tausch
+      }));
       return {
-        players: ps, turn: 0, round: 1, actionsLeft: 2, phase: "playing",
-        log: ["Spiel gestartet! " + ps[0].name + " beginnt (" + incSummary(ps[0]) + ")"],
-        tradeOffer: null, winner: null,
+        players: ps,
+        round: 1,
+        phase: "playing",
+        log: ["Runde 1 beginnt — alle spielen gleichzeitig!"],
+        chat: [],
+        tradeOffers: [], // Array von offenen Handelsangeboten
+        winner: null,
       };
     }
 
+    // ── SUPABASE ─────────────────────────────────────────────────────────────
     function makeSB() {
       const h = {
         "apikey": SUPABASE_ANON_KEY,
@@ -159,21 +167,20 @@
       };
       return {
         async getRoom(id) {
-          const r = await fetch(SUPABASE_URL + "/rest/v1/game_rooms?id=eq." + id + "&select=*", { headers: h });
-          const d = await r.json(); return d[0] || null;
+          const r = await fetch(SUPABASE_URL+"/rest/v1/game_rooms?id=eq."+id+"&select=*", {headers:h});
+          const d = await r.json(); return d[0]||null;
         },
         async createRoom(id, state) {
-          await fetch(SUPABASE_URL + "/rest/v1/game_rooms", { method: "POST", headers: h, body: JSON.stringify({ id, state }) });
+          await fetch(SUPABASE_URL+"/rest/v1/game_rooms", {method:"POST",headers:h,body:JSON.stringify({id,state})});
         },
         async updateRoom(id, state) {
-          await fetch(SUPABASE_URL + "/rest/v1/game_rooms?id=eq." + id, { method: "PATCH", headers: h, body: JSON.stringify({ state }) });
+          await fetch(SUPABASE_URL+"/rest/v1/game_rooms?id=eq."+id, {method:"PATCH",headers:h,body:JSON.stringify({state})});
         },
         subscribe(id, cb) {
-          // Polling every 2s as reliable fallback
           let lastJson = "";
           const poll = setInterval(async () => {
             try {
-              const r = await fetch(SUPABASE_URL + "/rest/v1/game_rooms?id=eq." + id + "&select=state", { headers: h });
+              const r = await fetch(SUPABASE_URL+"/rest/v1/game_rooms?id=eq."+id+"&select=state", {headers:h});
               const d = await r.json();
               if (d[0]) {
                 const j = JSON.stringify(d[0].state);
@@ -186,6 +193,7 @@
       };
     }
 
+    // ── APP ──────────────────────────────────────────────────────────────────
     function App() {
       const [screen, setScreen] = useState("home");
       const [myName, setMyName] = useState("");
@@ -196,78 +204,72 @@
       const [gs, setGs] = useState(null);
       const [error, setError] = useState("");
       const [loading, setLoading] = useState(false);
+
+      // Local UI
       const [panel, setPanel] = useState(null);
       const [bankRes, setBankRes] = useState(null);
-      const [bankAmt, setBankAmt] = useState(2);
+      const [bankAmt, setBankAmt] = useState(3);
       const [ptTarget, setPtTarget] = useState(null);
-      const [ptOffer, setPtOffer] = useState({ Holz: 0, Stein: 0, Getreide: 0, Gold: 0 });
-      const [ptWant, setPtWant] = useState({ Holz: 0, Stein: 0, Getreide: 0, Gold: 0 });
+      const [ptOffer, setPtOffer] = useState({Holz:0,Stein:0,Getreide:0,Gold:0});
+      const [ptWant, setPtWant]   = useState({Holz:0,Stein:0,Getreide:0,Gold:0});
+      const [chatMsg, setChatMsg] = useState("");
+      const chatEndRef = useRef(null);
 
       const sb = useRef(makeSB());
       const codeRef = useRef(null);
       const unsubRef = useRef(null);
 
-      // Reload protection: restore session from localStorage
+      // Session restore
       useEffect(() => {
         const saved = localStorage.getItem("handelswege_session");
         if (saved) {
           try {
-            const { code, idx, name } = JSON.parse(saved);
+            const {code, idx, name} = JSON.parse(saved);
             sb.current.getRoom(code).then(room => {
-              if (room && room.state && room.state.players && room.state.players[idx]) {
+              if (room && room.state && room.state.players && room.state.players[idx] && room.state.players[idx].name === name) {
                 codeRef.current = code;
-                setRoomCode(code);
-                setMyIndex(idx);
-                setMyName(name || room.state.players[idx].name);
-                setIsHost(idx === 0);
+                setRoomCode(code); setMyIndex(idx); setMyName(name); setIsHost(idx===0);
                 setGs(room.state);
                 setScreen(room.state.phase === "lobby" ? "lobby" : "game");
                 subscribe(code);
-              } else {
-                localStorage.removeItem("handelswege_session");
-              }
+              } else { localStorage.removeItem("handelswege_session"); }
             });
           } catch(e) { localStorage.removeItem("handelswege_session"); }
         }
       }, []);
 
-      function saveSession(code, idx, name) {
-        localStorage.setItem("handelswege_session", JSON.stringify({ code, idx, name }));
-      }
+      // Auto-switch lobby→game
+      useEffect(() => {
+        if (screen === "lobby" && gs && gs.phase === "playing") setScreen("game");
+      }, [gs && gs.phase]);
 
-      function clearSession() {
-        localStorage.removeItem("handelswege_session");
-      }
+      // Auto-scroll chat
+      useEffect(() => {
+        if (chatEndRef.current) chatEndRef.current.scrollIntoView({behavior:"smooth"});
+      }, [gs && gs.chat && gs.chat.length]);
 
       function subscribe(code) {
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = sb.current.subscribe(code, newState => setGs(newState));
       }
 
+      function saveSession(code, idx, name) { localStorage.setItem("handelswege_session", JSON.stringify({code,idx,name})); }
+      function clearSession() { localStorage.removeItem("handelswege_session"); }
+
       async function push(newGs) {
         setGs(newGs);
         await sb.current.updateRoom(codeRef.current, newGs);
       }
 
-      function addLog(g, msg) {
-        return { ...g, log: [msg, ...(g.log || [])].slice(0, 40) };
-      }
+      function addLog(g, msg) { return {...g, log:[msg,...(g.log||[])].slice(0,60)}; }
+      function resetTrade() { setPtTarget(null); setPtOffer({Holz:0,Stein:0,Getreide:0,Gold:0}); setPtWant({Holz:0,Stein:0,Getreide:0,Gold:0}); }
 
-      function resetTrade() {
-        setPtTarget(null);
-        setPtOffer({ Holz: 0, Stein: 0, Getreide: 0, Gold: 0 });
-        setPtWant({ Holz: 0, Stein: 0, Getreide: 0, Gold: 0 });
-      }
-
+      // ── LOBBY ──────────────────────────────────────────────────────────────
       async function createRoom() {
         if (!myName.trim()) { setError("Bitte Namen eingeben"); return; }
         setLoading(true); setError("");
         const code = generateRoomCode();
-        const lobby = {
-          phase: "lobby",
-          players: [{ name: myName.trim(), color: PLAYER_COLORS[0] }],
-          log: [], turn: 0, round: 1, actionsLeft: 2, tradeOffer: null, winner: null,
-        };
+        const lobby = { phase:"lobby", players:[{name:myName.trim(), color:PLAYER_COLORS[0]}], log:[], chat:[], tradeOffers:[], winner:null };
         await sb.current.createRoom(code, lobby);
         codeRef.current = code;
         setRoomCode(code); setMyIndex(0); setIsHost(true); setGs(lobby);
@@ -283,10 +285,10 @@
         const room = await sb.current.getRoom(code);
         if (!room) { setError("Raum nicht gefunden"); setLoading(false); return; }
         if (room.state.phase !== "lobby") { setError("Spiel läuft bereits"); setLoading(false); return; }
-        if (room.state.players.length >= 4) { setError("Raum voll (max. 4)"); setLoading(false); return; }
+        if (room.state.players.length >= 4) { setError("Raum voll"); setLoading(false); return; }
         const idx = room.state.players.length;
-        const newPlayers = [...room.state.players, { name: myName.trim(), color: PLAYER_COLORS[idx] }];
-        const newGs = { ...room.state, players: newPlayers };
+        const newPs = [...room.state.players, {name:myName.trim(), color:PLAYER_COLORS[idx]}];
+        const newGs = {...room.state, players:newPs};
         codeRef.current = code;
         setRoomCode(code); setMyIndex(idx); setIsHost(false);
         await sb.current.updateRoom(code, newGs);
@@ -299,195 +301,274 @@
         await push(initGameState(gs.players));
       }
 
-      useEffect(() => {
-        if (screen === "lobby" && gs && gs.phase === "playing") setScreen("game");
-      }, [gs && gs.phase]);
+      // ── GAME ACTIONS ───────────────────────────────────────────────────────
+      const me = gs && gs.players ? gs.players[myIndex] : null;
 
-      const myTurn = gs && gs.phase === "playing" && gs.turn === myIndex;
-
-      async function endTurn() {
-        if (!myTurn) return;
-        const next = (gs.turn + 1) % gs.players.length;
-        const newRound = next === 0 ? gs.round + 1 : gs.round;
+      // Plan a build this round (costs resources immediately, shown as "pending")
+      async function doBuild(bid) {
+        if (!me || me.ready) return;
+        const b = BUILDINGS.find(x => x.id === bid);
+        const cur = me.buildings[bid] || 0;
+        if (!b || cur >= 3) return;
+        const bd = b.levels[cur]; // next level
+        // Deduct from current resources
+        if (!canAfford(me.resources, bd.cost)) return;
         const newPlayers = [...gs.players];
-        newPlayers[next] = applyIncome(newPlayers[next]);
-        let g = addLog({ ...gs, players: newPlayers, turn: next, round: newRound, actionsLeft: 2, tradeOffer: null },
-          "— Runde " + newRound + ": " + newPlayers[next].name + " ist dran (" + incSummary(gs.players[next]) + ") —");
-        setPanel(null); await push(g);
+        newPlayers[myIndex] = {
+          ...me,
+          resources: deduct(me.resources, bd.cost),
+          pendingBuild: {bid, level: cur+1},
+        };
+        let g = {...gs, players: newPlayers};
+        setPanel(null);
+        await push(g);
+      }
+
+      async function cancelBuild() {
+        if (!me || me.ready || !me.pendingBuild) return;
+        const b = BUILDINGS.find(x => x.id === me.pendingBuild.bid);
+        const bd = b.levels[me.pendingBuild.level - 1];
+        // Refund resources
+        const refunded = {...me.resources};
+        for (const [r,v] of Object.entries(bd.cost)) refunded[r] = (refunded[r]||0) + v;
+        const newPlayers = [...gs.players];
+        newPlayers[myIndex] = {...me, resources: refunded, pendingBuild: null};
+        await push({...gs, players: newPlayers});
       }
 
       async function doBankTrade() {
-        if (!myTurn || !bankRes || gs.actionsLeft <= 0) return;
-        const p = gs.players[myIndex];
-        const hasHafen = (p.buildings["hafen"] || 0) > 0;
-        const rate = hasHafen ? 1 : BANK_RATES[bankRes];
-        if ((p.resources[bankRes] || 0) < bankAmt) return;
-        const goldGain = hasHafen ? bankAmt : Math.floor(bankAmt / rate);
+        if (!me || me.ready || !bankRes) return;
+        const hasHafen = (me.buildings["hafen"]||0) > 0;
+        const rate = hasHafen ? 2 : BANK_RATES[bankRes];
+        if ((me.resources[bankRes]||0) < bankAmt) return;
+        const goldGain = Math.floor(bankAmt / rate);
         if (goldGain < 1) return;
         const newPlayers = [...gs.players];
-        newPlayers[myIndex] = { ...p, resources: { ...p.resources, [bankRes]: p.resources[bankRes] - bankAmt, Gold: (p.resources.Gold || 0) + goldGain } };
-        let g = addLog({ ...gs, players: newPlayers, actionsLeft: gs.actionsLeft - 1 },
-          p.name + " → Bank: " + bankAmt + "x " + RES_ICONS[bankRes] + " → +" + goldGain + "🪙");
-        setPanel(null); setBankRes(null); setBankAmt(2); await push(g);
+        newPlayers[myIndex] = {...me, resources:{...me.resources, [bankRes]: me.resources[bankRes]-bankAmt, Gold:(me.resources.Gold||0)+goldGain}};
+        let g = addLog({...gs, players:newPlayers}, me.name+" → Bank: "+bankAmt+"x"+RES_ICONS[bankRes]+" → +"+goldGain+"🪙");
+        setPanel(null); setBankRes(null); setBankAmt(3);
+        await push(g);
       }
 
+      // Send trade offer
       async function sendTradeOffer() {
-        if (!myTurn || ptTarget === null || gs.actionsLeft <= 0) return;
-        const me = gs.players[myIndex];
+        if (!me || ptTarget === null) return;
         if (!canAfford(me.resources, ptOffer)) { setError("Nicht genug Ressourcen"); return; }
-        if (Object.values(ptOffer).every(v => v === 0) && Object.values(ptWant).every(v => v === 0)) return;
-        let g = addLog({ ...gs, tradeOffer: { from: myIndex, to: ptTarget, offer: { ...ptOffer }, want: { ...ptWant } } },
-          me.name + " schickt Angebot an " + gs.players[ptTarget].name + "…");
-        setPanel(null); resetTrade(); await push(g);
+        if (Object.values(ptOffer).every(v=>v===0) && Object.values(ptWant).every(v=>v===0)) return;
+        const offer = {
+          id: Date.now(),
+          from: myIndex, fromName: me.name, fromColor: me.color,
+          to: ptTarget, toName: gs.players[ptTarget].name,
+          offer: {...ptOffer}, want: {...ptWant},
+        };
+        // Reserve the offered resources
+        const newPlayers = [...gs.players];
+        newPlayers[myIndex] = {...me, resources: deduct(me.resources, ptOffer)};
+        let g = addLog({...gs, players:newPlayers, tradeOffers:[...(gs.tradeOffers||[]), offer]},
+          me.name+" bietet Handel an "+gs.players[ptTarget].name+"…");
+        setPanel(null); resetTrade();
+        await push(g);
       }
 
-      async function acceptTrade() {
-        const offer = gs.tradeOffer;
-        if (!offer || offer.to !== myIndex) return;
+      async function acceptTrade(offer) {
         const them = gs.players[offer.from];
-        const me = gs.players[myIndex];
-        if (!canAfford(them.resources, offer.offer) || !canAfford(me.resources, offer.want)) return;
+        const myP  = gs.players[myIndex];
+        if (!canAfford(myP.resources, offer.want)) { setError("Nicht genug zum Annehmen"); return; }
         const newPlayers = [...gs.players];
-        let thRes = deduct({ ...them.resources }, offer.offer);
-        for (const [r, v] of Object.entries(offer.want)) thRes[r] = (thRes[r] || 0) + v;
-        newPlayers[offer.from] = { ...them, resources: thRes };
-        let meRes = deduct({ ...me.resources }, offer.want);
-        for (const [r, v] of Object.entries(offer.offer)) meRes[r] = (meRes[r] || 0) + v;
-        newPlayers[myIndex] = { ...me, resources: meRes };
-        const os = Object.entries(offer.offer).filter(([,v])=>v>0).map(([r,v])=>v+RES_ICONS[r]).join(" ") || "nichts";
-        const ws2 = Object.entries(offer.want).filter(([,v])=>v>0).map(([r,v])=>v+RES_ICONS[r]).join(" ") || "nichts";
-        let g = addLog({ ...gs, players: newPlayers, tradeOffer: null, actionsLeft: gs.actionsLeft - 1 },
-          "✅ " + them.name + " gibt " + os + ", " + me.name + " gibt " + ws2);
+        // Give me what I wanted, take what I give
+        let myRes = deduct({...myP.resources}, offer.want);
+        for (const [r,v] of Object.entries(offer.offer)) myRes[r] = (myRes[r]||0)+v;
+        newPlayers[myIndex] = {...myP, resources: myRes};
+        // Give them back what they offered + what they wanted
+        let thRes = {...them.resources};
+        for (const [r,v] of Object.entries(offer.want)) thRes[r] = (thRes[r]||0)+v;
+        newPlayers[offer.from] = {...them, resources: thRes};
+        // Remove this offer
+        const newOffers = (gs.tradeOffers||[]).filter(o=>o.id!==offer.id);
+        const os = Object.entries(offer.offer).filter(([,v])=>v>0).map(([r,v])=>v+RES_ICONS[r]).join(" ")||"nichts";
+        const ws = Object.entries(offer.want).filter(([,v])=>v>0).map(([r,v])=>v+RES_ICONS[r]).join(" ")||"nichts";
+        let g = addLog({...gs, players:newPlayers, tradeOffers:newOffers},
+          "✅ "+them.name+" gibt "+os+", "+myP.name+" gibt "+ws);
         await push(g);
       }
 
-      async function declineTrade() {
-        if (!gs.tradeOffer || gs.tradeOffer.to !== myIndex) return;
-        let g = addLog({ ...gs, tradeOffer: null }, "❌ " + gs.players[myIndex].name + " lehnt ab");
+      async function declineTrade(offer) {
+        // Refund offered resources to sender
+        const them = gs.players[offer.from];
+        const newPlayers = [...gs.players];
+        let thRes = {...them.resources};
+        for (const [r,v] of Object.entries(offer.offer)) thRes[r] = (thRes[r]||0)+v;
+        newPlayers[offer.from] = {...them, resources: thRes};
+        const newOffers = (gs.tradeOffers||[]).filter(o=>o.id!==offer.id);
+        let g = addLog({...gs, players:newPlayers, tradeOffers:newOffers},
+          "❌ "+gs.players[myIndex].name+" lehnt Angebot von "+offer.fromName+" ab");
         await push(g);
       }
 
-      async function doBuild(bid) {
-        if (!myTurn || gs.actionsLeft <= 0) return;
-        const b = BUILDINGS.find(x => x.id === bid);
-        const p = gs.players[myIndex];
-        const cur = p.buildings[bid] || 0;
-        if (!b || cur >= 3) return;
-        const nxt = cur + 1;
-        const bd = b.levels[nxt - 1];
-        if (!canAfford(p.resources, bd.cost)) return;
-        const newB = { ...p.buildings, [bid]: nxt };
+      async function cancelOwnOffer(offer) {
+        // Refund my resources
         const newPlayers = [...gs.players];
-        newPlayers[myIndex] = { ...p, resources: deduct(p.resources, bd.cost), buildings: newB };
-        const action = cur === 0 ? "baut" : "upgradet auf Stufe " + nxt;
-        let g = addLog({ ...gs, players: newPlayers, actionsLeft: gs.actionsLeft - 1 },
-          p.name + " " + action + " " + b.icon + " " + b.name + " (+" + bd.vp + "VP)");
-        const newVP = Object.entries(newB).reduce((s, [id, lvl]) => {
-          const bb = BUILDINGS.find(x => x.id === id); return s + (bb ? bb.levels[lvl - 1].vp : 0);
-        }, 0);
-        if (newVP >= WIN_VP) { g.phase = "finished"; g.winner = myIndex; }
-        setPanel(null); await push(g);
+        let myRes = {...me.resources};
+        for (const [r,v] of Object.entries(offer.offer)) myRes[r] = (myRes[r]||0)+v;
+        newPlayers[myIndex] = {...me, resources: myRes};
+        const newOffers = (gs.tradeOffers||[]).filter(o=>o.id!==offer.id);
+        let g = addLog({...gs, players:newPlayers, tradeOffers:newOffers}, me.name+" zieht Angebot zurück");
+        await push(g);
       }
 
-      const ipt = { background: "#1b1f2e", border: "1px solid #333", borderRadius: 8, padding: "10px 12px", color: "#fff", fontSize: 15, outline: "none", width: "100%", display: "block" };
+      // Mark ready — when all ready, round resolves
+      async function markReady() {
+        if (!me || me.ready) return;
+        const newPlayers = [...gs.players];
+        newPlayers[myIndex] = {...me, ready: true};
+        let g = {...gs, players: newPlayers};
+        g = addLog(g, me.name+" ist bereit ✓");
 
-      function ResCounter({ res, val, setVal, max }) {
+        // Check if all ready
+        const allReady = newPlayers.every(p => p.ready);
+        if (allReady) {
+          // Resolve round: apply pending builds + income
+          let resolved = newPlayers.map(p => {
+            let np = {...p, ready: false};
+            // Apply pending build
+            if (np.pendingBuild) {
+              const {bid, level} = np.pendingBuild;
+              np.buildings = {...np.buildings, [bid]: level};
+              np.pendingBuild = null;
+            }
+            // Apply income
+            np = applyIncome(np);
+            return np;
+          });
+
+          // Check for winner
+          let winner = null;
+          for (let i = 0; i < resolved.length; i++) {
+            if (calcVP(resolved[i]) >= WIN_VP) { winner = i; break; }
+          }
+
+          const newRound = gs.round + 1;
+          const incLogs = resolved.map(p => p.name+": "+incSummary(p)).join(" | ");
+          g = addLog({...g, players: resolved, round: newRound, phase: winner!==null?"finished":"playing", winner},
+            "🔔 Runde "+gs.round+" abgeschlossen! Einnahmen: "+incLogs);
+          if (winner !== null) g = addLog(g, "🏆 "+resolved[winner].name+" gewinnt mit "+calcVP(resolved[winner])+" VP!");
+        }
+
+        await push(g);
+      }
+
+      // Chat
+      async function sendChat() {
+        if (!chatMsg.trim() || !gs || !me) return;
+        const msg = {name:me.name, text:chatMsg.trim(), color:me.color, t:Date.now()};
+        const newChat = [...(gs.chat||[]), msg].slice(-60);
+        setChatMsg("");
+        await push({...gs, chat:newChat});
+      }
+
+      // ── RENDER ──────────────────────────────────────────────────────────────
+      const ipt = {background:"#1b1f2e",border:"1px solid #333",borderRadius:8,padding:"10px 12px",color:"#fff",fontSize:15,outline:"none",width:"100%",display:"block"};
+
+      function ResCounter({res, val, setVal, max}) {
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <button onClick={() => setVal(v => Math.max(0, v - 1))} style={{ background: "#333", border: "none", borderRadius: 4, color: "#fff", width: 28, height: 28, fontSize: 16, cursor: "pointer" }}>−</button>
-            <span style={{ color: "#fff", fontWeight: 700, minWidth: 20, textAlign: "center" }}>{val}</span>
-            <button onClick={() => setVal(v => Math.min(max, v + 1))} style={{ background: "#333", border: "none", borderRadius: 4, color: "#fff", width: 28, height: 28, fontSize: 16, cursor: "pointer" }}>+</button>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <button onClick={()=>setVal(v=>Math.max(0,v-1))} style={{background:"#333",border:"none",borderRadius:4,color:"#fff",width:28,height:28,fontSize:16,cursor:"pointer"}}>−</button>
+            <span style={{color:"#fff",fontWeight:700,minWidth:20,textAlign:"center"}}>{val}</span>
+            <button onClick={()=>setVal(v=>Math.min(max,v+1))} style={{background:"#333",border:"none",borderRadius:4,color:"#fff",width:28,height:28,fontSize:16,cursor:"pointer"}}>+</button>
           </div>
         );
       }
 
-      function LevelDots({ level }) {
+      function LevelDots({level}) {
         return (
-          <div style={{ display: "flex", gap: 2 }}>
-            {[1, 2, 3].map(i => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: i <= level ? "#f4a261" : "#333" }} />)}
+          <div style={{display:"flex",gap:2}}>
+            {[1,2,3].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:i<=level?"#f4a261":"#333"}}/>)}
           </div>
         );
       }
 
+      // HOME
       if (screen === "home") return (
-        <div style={{ minHeight: "100vh", background: "#1b1f2e", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ width: "100%", maxWidth: 400 }}>
-            <h1 style={{ color: "#f4a261", textAlign: "center", fontSize: 34, fontWeight: 900, marginBottom: 4 }}>Handelswege</h1>
-            <p style={{ color: "#555", textAlign: "center", marginBottom: 28, fontSize: 13 }}>Multiplayer Wirtschaftsstrategie · 2–4 Spieler</p>
-            <div style={{ background: "#252a3a", borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 8 }}>DEIN NAME</div>
-              <input style={ipt} value={myName} onChange={e => setMyName(e.target.value)} placeholder="Name eingeben…" maxLength={16} />
+        <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{width:"100%",maxWidth:400}}>
+            <h1 style={{color:"#f4a261",textAlign:"center",fontSize:34,fontWeight:900,marginBottom:4}}>Handelswege</h1>
+            <p style={{color:"#555",textAlign:"center",marginBottom:28,fontSize:13}}>Alle spielen gleichzeitig · 2–4 Spieler</p>
+            <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:14}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>DEIN NAME</div>
+              <input style={ipt} value={myName} onChange={e=>setMyName(e.target.value)} placeholder="Name eingeben…" maxLength={16}/>
             </div>
-            <button onClick={createRoom} disabled={loading} style={{ width: "100%", background: "#f4a261", border: "none", borderRadius: 12, color: "#1b1f2e", padding: 16, fontSize: 16, fontWeight: 900, cursor: "pointer", marginBottom: 12 }}>
+            <button onClick={createRoom} disabled={loading} style={{width:"100%",background:"#f4a261",border:"none",borderRadius:12,color:"#1b1f2e",padding:16,fontSize:16,fontWeight:900,cursor:"pointer",marginBottom:12}}>
               🏠 Neuen Raum erstellen
             </button>
-            <div style={{ background: "#252a3a", borderRadius: 14, padding: "14px 16px" }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 8 }}>RAUM BEITRETEN</div>
-              <input style={{ ...ipt, textTransform: "uppercase", letterSpacing: 4, textAlign: "center", fontSize: 22, fontWeight: 700, marginBottom: 10 }}
-                value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={4} />
-              <button onClick={joinRoom} disabled={loading} style={{ width: "100%", background: "#457b9d", border: "none", borderRadius: 10, color: "#fff", padding: 13, fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+            <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px"}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>RAUM BEITRETEN</div>
+              <input style={{...ipt,textTransform:"uppercase",letterSpacing:4,textAlign:"center",fontSize:22,fontWeight:700,marginBottom:10}}
+                value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="CODE" maxLength={4}/>
+              <button onClick={joinRoom} disabled={loading} style={{width:"100%",background:"#457b9d",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer"}}>
                 Beitreten
               </button>
             </div>
-            {error && <div style={{ color: "#e76f51", textAlign: "center", fontSize: 13, marginTop: 12 }}>{error}</div>}
-            {loading && <div style={{ color: "#666", textAlign: "center", fontSize: 13, marginTop: 8 }}>Verbinde…</div>}
+            {error && <div style={{color:"#e76f51",textAlign:"center",fontSize:13,marginTop:12}}>{error}</div>}
+            {loading && <div style={{color:"#666",textAlign:"center",fontSize:13,marginTop:8}}>Verbinde…</div>}
           </div>
         </div>
       );
 
+      // LOBBY
       if (screen === "lobby") return (
-        <div style={{ minHeight: "100vh", background: "#1b1f2e", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          <div style={{ width: "100%", maxWidth: 400 }}>
-            <h2 style={{ color: "#f4a261", textAlign: "center", fontSize: 26, fontWeight: 900, marginBottom: 6 }}>Warteraum</h2>
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ color: "#555", fontSize: 12, marginBottom: 8 }}>Code für andere Spieler:</div>
-              <div style={{ color: "#fff", fontSize: 44, fontWeight: 900, letterSpacing: 10, background: "#252a3a", borderRadius: 12, padding: "14px 0" }}>{roomCode}</div>
+        <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{width:"100%",maxWidth:400}}>
+            <h2 style={{color:"#f4a261",textAlign:"center",fontSize:26,fontWeight:900,marginBottom:6}}>Warteraum</h2>
+            <div style={{textAlign:"center",marginBottom:24}}>
+              <div style={{color:"#555",fontSize:12,marginBottom:8}}>Code für andere Spieler:</div>
+              <div style={{color:"#fff",fontSize:44,fontWeight:900,letterSpacing:10,background:"#252a3a",borderRadius:12,padding:"14px 0"}}>{roomCode}</div>
             </div>
-            <div style={{ background: "#252a3a", borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 10 }}>SPIELER ({(gs && gs.players ? gs.players.length : 0)}/4)</div>
-              {(gs && gs.players ? gs.players : []).map((p, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < gs.players.length - 1 ? "1px solid #333" : "none" }}>
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: p.color }} />
-                  <span style={{ color: "#fff", fontWeight: i === myIndex ? 700 : 400 }}>{p.name}</span>
-                  {i === 0 && <span style={{ color: "#f4a261", fontSize: 11, marginLeft: "auto" }}>Host</span>}
-                  {i === myIndex && i !== 0 && <span style={{ color: "#2a9d8f", fontSize: 11, marginLeft: "auto" }}>Du</span>}
+            <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:16}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>SPIELER ({(gs&&gs.players?gs.players.length:0)}/4)</div>
+              {(gs&&gs.players?gs.players:[]).map((p,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:i<gs.players.length-1?"1px solid #333":"none"}}>
+                  <div style={{width:10,height:10,borderRadius:"50%",background:p.color}}/>
+                  <span style={{color:"#fff",fontWeight:i===myIndex?700:400}}>{p.name}</span>
+                  {i===0&&<span style={{color:"#f4a261",fontSize:11,marginLeft:"auto"}}>Host</span>}
+                  {i===myIndex&&i!==0&&<span style={{color:"#2a9d8f",fontSize:11,marginLeft:"auto"}}>Du</span>}
                 </div>
               ))}
             </div>
             {isHost
-              ? <button onClick={startGame} disabled={!gs || gs.players.length < 2}
-                  style={{ width: "100%", background: gs && gs.players.length >= 2 ? "#2a9d8f" : "#333", border: "none", borderRadius: 12, color: "#fff", padding: 16, fontSize: 16, fontWeight: 900, cursor: "pointer" }}>
-                  {gs && gs.players.length >= 2 ? "Spiel starten → " + gs.players.length + " Spieler" : "Warte auf Spieler… (mind. 2)"}
+              ? <button onClick={startGame} disabled={!gs||gs.players.length<2}
+                  style={{width:"100%",background:gs&&gs.players.length>=2?"#2a9d8f":"#333",border:"none",borderRadius:12,color:"#fff",padding:16,fontSize:16,fontWeight:900,cursor:"pointer"}}>
+                  {gs&&gs.players.length>=2?"Spiel starten → "+gs.players.length+" Spieler":"Warte auf Spieler… (mind. 2)"}
                 </button>
-              : <div style={{ color: "#555", textAlign: "center", fontSize: 14, padding: 16 }}>Warte auf den Host…</div>
+              : <div style={{color:"#555",textAlign:"center",fontSize:14,padding:16}}>Warte auf Host…</div>
             }
-            {error && <div style={{ color: "#e76f51", textAlign: "center", fontSize: 13, marginTop: 10 }}>{error}</div>}
+            {error&&<div style={{color:"#e76f51",textAlign:"center",fontSize:13,marginTop:10}}>{error}</div>}
           </div>
         </div>
       );
 
+      // FINISHED
       if (gs && gs.phase === "finished") {
-        const ranked = (gs.players || []).map((p, i) => ({ ...p, vp: calcVP(p), idx: i })).sort((a, b) => b.vp - a.vp);
+        const ranked = (gs.players||[]).map((p,i)=>({...p,vp:calcVP(p),idx:i})).sort((a,b)=>b.vp-a.vp);
         return (
-          <div style={{ minHeight: "100vh", background: "#1b1f2e", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-            <div style={{ width: "100%", maxWidth: 400, textAlign: "center" }}>
-              <div style={{ fontSize: 60, marginBottom: 8 }}>🏆</div>
-              <h2 style={{ color: "#fff", fontSize: 28, marginBottom: 4 }}>{ranked[0].name} gewinnt!</h2>
-              <p style={{ color: "#666", marginBottom: 28 }}>Runde {gs.round} · {ranked[0].vp} VP</p>
-              <div style={{ background: "#252a3a", borderRadius: 14, padding: 20, marginBottom: 24 }}>
-                {ranked.map((p, rank) => (
-                  <div key={p.idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: rank < ranked.length - 1 ? "1px solid #2e2e2e" : "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 18 }}>{["🥇","🥈","🥉","4."][rank]}</span>
-                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: p.color }} />
-                      <span style={{ color: "#fff", fontWeight: 600 }}>{p.name}</span>
+          <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+            <div style={{width:"100%",maxWidth:400,textAlign:"center"}}>
+              <div style={{fontSize:60,marginBottom:8}}>🏆</div>
+              <h2 style={{color:"#fff",fontSize:28,marginBottom:4}}>{ranked[0].name} gewinnt!</h2>
+              <p style={{color:"#666",marginBottom:28}}>Runde {gs.round-1} · {ranked[0].vp} VP</p>
+              <div style={{background:"#252a3a",borderRadius:14,padding:20,marginBottom:24}}>
+                {ranked.map((p,rank)=>(
+                  <div key={p.idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:rank<ranked.length-1?"1px solid #2e2e2e":"none"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <span style={{fontSize:18}}>{["🥇","🥈","🥉","4."][rank]}</span>
+                      <div style={{width:8,height:8,borderRadius:"50%",background:p.color}}/>
+                      <span style={{color:"#fff",fontWeight:600}}>{p.name}</span>
                     </div>
-                    <span style={{ color: p.color, fontWeight: 800, fontSize: 20 }}>{p.vp} VP</span>
+                    <span style={{color:p.color,fontWeight:800,fontSize:20}}>{p.vp} VP</span>
                   </div>
                 ))}
               </div>
-              <button onClick={() => { clearSession(); setScreen("home"); setGs(null); setMyIndex(null); setIsHost(false); setRoomCode(""); setJoinCode(""); setError(""); }}
-                style={{ width: "100%", background: "#f4a261", border: "none", borderRadius: 12, color: "#1b1f2e", padding: 14, fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
+              <button onClick={()=>{clearSession();setScreen("home");setGs(null);setMyIndex(null);setIsHost(false);setRoomCode("");setJoinCode("");setError("");}}
+                style={{width:"100%",background:"#f4a261",border:"none",borderRadius:12,color:"#1b1f2e",padding:14,fontSize:16,fontWeight:800,cursor:"pointer"}}>
                 Zurück zum Menü
               </button>
             </div>
@@ -495,160 +576,145 @@
         );
       }
 
-      if (!gs || !gs.players || myIndex === null) return (
-        <div style={{ minHeight: "100vh", background: "#1b1f2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ color: "#555", fontSize: 16 }}>Verbinde…</div>
+      // GAME
+      if (!gs||!gs.players||myIndex===null||!me) return (
+        <div style={{minHeight:"100vh",background:"#1b1f2e",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{color:"#555",fontSize:16}}>Verbinde…</div>
         </div>
       );
 
-      const cp = gs.players[gs.turn];
-      const me = gs.players[myIndex];
       const myInc = calcIncome(me);
-      const hasHafen = (me.buildings["hafen"] || 0) > 0;
-      const pendingTrade = gs.tradeOffer && gs.tradeOffer.to === myIndex;
+      const hasHafen = (me.buildings["hafen"]||0) > 0;
+      const readyCount = gs.players.filter(p=>p.ready).length;
+      const myOffers = (gs.tradeOffers||[]).filter(o=>o.from===myIndex);
+      const offersForMe = (gs.tradeOffers||[]).filter(o=>o.to===myIndex);
 
       return (
-        <div style={{ minHeight: "100vh", background: "#1b1f2e", padding: "12px 12px 40px" }}>
-          <div style={{ maxWidth: 580, margin: "0 auto" }}>
+        <div style={{minHeight:"100vh",background:"#1b1f2e",padding:"12px 12px 40px"}}>
+          <div style={{maxWidth:580,margin:"0 auto"}}>
 
-            {pendingTrade && (
-              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
-                <div style={{ background: "#252a3a", borderRadius: 16, padding: 24, width: "100%", maxWidth: 360 }}>
-                  <div style={{ color: "#f4a261", fontWeight: 800, fontSize: 17, marginBottom: 16, textAlign: "center" }}>
-                    🤝 Angebot von {gs.players[gs.tradeOffer.from].name}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-                    <div>
-                      <div style={{ color: "#888", fontSize: 12, marginBottom: 8 }}>Du bekommst:</div>
-                      {Object.entries(gs.tradeOffer.offer).filter(([,v])=>v>0).map(([r,v]) => (
-                        <div key={r} style={{ color: "#2a9d8f", fontSize: 15, fontWeight: 700 }}>{RES_ICONS[r]} {v}x {r}</div>
-                      ))}
-                      {Object.values(gs.tradeOffer.offer).every(v=>v===0) && <div style={{ color: "#555" }}>nichts</div>}
-                    </div>
-                    <div>
-                      <div style={{ color: "#888", fontSize: 12, marginBottom: 8 }}>Du gibst:</div>
-                      {Object.entries(gs.tradeOffer.want).filter(([,v])=>v>0).map(([r,v]) => (
-                        <div key={r} style={{ color: "#e76f51", fontSize: 15, fontWeight: 700 }}>{RES_ICONS[r]} {v}x {r}</div>
-                      ))}
-                      {Object.values(gs.tradeOffer.want).every(v=>v===0) && <div style={{ color: "#555" }}>nichts</div>}
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    <button onClick={declineTrade} style={{ background: "#e76f51", border: "none", borderRadius: 10, color: "#fff", padding: 13, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>❌ Ablehnen</button>
-                    <button onClick={acceptTrade} style={{ background: "#2a9d8f", border: "none", borderRadius: 10, color: "#fff", padding: 13, fontWeight: 700, fontSize: 15, cursor: "pointer" }}>✅ Annehmen</button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ color: "#444", fontSize: 12 }}>Runde {gs.round} · {roomCode}</span>
-              <span style={{ color: cp.color, fontWeight: 800, fontSize: 14 }}>{myTurn ? "✨ Du bist dran!" : cp.name + " ist dran"}</span>
-              <span style={{ color: "#444", fontSize: 12 }}>Aktionen: <b style={{ color: myTurn ? (gs.actionsLeft > 0 ? "#2a9d8f" : "#e76f51") : "#333" }}>{myTurn ? gs.actionsLeft : "—"}</b></span>
+            {/* Header */}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <span style={{color:"#444",fontSize:12}}>Runde {gs.round} · {roomCode}</span>
+              <span style={{color:"#f4a261",fontWeight:800,fontSize:14}}>Alle spielen gleichzeitig</span>
+              <span style={{color:"#444",fontSize:12}}>{readyCount}/{gs.players.length} bereit</span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(" + gs.players.length + ",1fr)", gap: 6, marginBottom: 12 }}>
-              {gs.players.map((p, i) => {
+            {/* VP board */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat("+gs.players.length+",1fr)",gap:6,marginBottom:12}}>
+              {gs.players.map((p,i)=>{
                 const vp = calcVP(p);
                 return (
-                  <div key={i} style={{ background: i === gs.turn ? p.color + "22" : "#252a3a", border: "2px solid " + (i === gs.turn ? p.color : i === myIndex ? p.color + "55" : "#2e2e2e"), borderRadius: 10, padding: "8px 4px", textAlign: "center" }}>
-                    <div style={{ color: p.color, fontSize: 10, fontWeight: 700 }}>{(p.name.length > 6 ? p.name.slice(0,6)+"…" : p.name) + (i === myIndex ? " 👤" : "")}</div>
-                    <div style={{ color: "#fff", fontSize: 20, fontWeight: 900 }}>{vp}</div>
-                    <div style={{ color: "#444", fontSize: 10 }}>/ {WIN_VP} VP</div>
-                    <div style={{ marginTop: 3, height: 3, background: "#333", borderRadius: 2, overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: Math.min(100, vp / WIN_VP * 100) + "%", background: p.color }} />
+                  <div key={i} style={{background:i===myIndex?p.color+"22":"#252a3a",border:"2px solid "+(i===myIndex?p.color:"#2e2e2e"),borderRadius:10,padding:"8px 4px",textAlign:"center"}}>
+                    <div style={{color:p.color,fontSize:10,fontWeight:700}}>{(p.name.length>6?p.name.slice(0,6)+"…":p.name)}</div>
+                    <div style={{color:"#fff",fontSize:20,fontWeight:900}}>{vp}</div>
+                    <div style={{color:"#444",fontSize:10}}>/ {WIN_VP} VP</div>
+                    <div style={{marginTop:3,height:3,background:"#333",borderRadius:2,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:Math.min(100,vp/WIN_VP*100)+"%",background:p.color}}/>
                     </div>
+                    {p.ready && <div style={{color:"#2a9d8f",fontSize:10,marginTop:2}}>✓ bereit</div>}
                   </div>
                 );
               })}
             </div>
 
-            <div style={{ background: "#252a3a", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-              <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 8 }}>MEINE RESSOURCEN</div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6 }}>
-                {RESOURCES.map(r => (
-                  <div key={r} style={{ background: "#1b1f2e", borderRadius: 8, padding: "8px 4px", textAlign: "center" }}>
-                    <div style={{ fontSize: 18 }}>{RES_ICONS[r]}</div>
-                    <div style={{ color: "#fff", fontWeight: 800, fontSize: 20 }}>{me.resources[r] || 0}</div>
-                    <div style={{ color: "#555", fontSize: 10 }}>{r}</div>
-                    {(myInc[r] || 0) > 0 && <div style={{ color: "#2a9d8f", fontSize: 10 }}>+{myInc[r]}/Rd</div>}
+            {/* My Resources */}
+            <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>MEINE RESSOURCEN</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+                {RESOURCES.map(r=>(
+                  <div key={r} style={{background:"#1b1f2e",borderRadius:8,padding:"8px 4px",textAlign:"center"}}>
+                    <div style={{fontSize:18}}>{RES_ICONS[r]}</div>
+                    <div style={{color:"#fff",fontWeight:800,fontSize:20}}>{me.resources[r]||0}</div>
+                    <div style={{color:"#555",fontSize:10}}>{r}</div>
+                    {(myInc[r]||0)>0&&<div style={{color:"#2a9d8f",fontSize:10}}>+{myInc[r]}/Rd</div>}
                   </div>
                 ))}
               </div>
+              {me.pendingBuild && (
+                <div style={{marginTop:8,background:"#1b1f2e",borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{color:"#f4a261",fontSize:13}}>
+                    🏗 {BUILDINGS.find(b=>b.id===me.pendingBuild.bid)?.icon} {BUILDINGS.find(b=>b.id===me.pendingBuild.bid)?.name} Stufe {me.pendingBuild.level} geplant
+                  </span>
+                  <button onClick={cancelBuild} style={{background:"#e76f51",border:"none",borderRadius:6,color:"#fff",padding:"4px 10px",fontSize:12,cursor:"pointer"}}>Abbrechen</button>
+                </div>
+              )}
             </div>
 
-            {myTurn && (
-              <div style={{ background: "#252a3a", borderRadius: 12, padding: "12px 14px", marginBottom: 10 }}>
-                <div style={{ color: "#555", fontSize: 11, letterSpacing: 1, marginBottom: 10 }}>AKTIONEN ({gs.actionsLeft} übrig)</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Anbieten",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"}].map(({key,label,col}) => (
+            {/* Actions — only if not ready */}
+            {!me.ready && (
+              <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+                <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>AKTIONEN</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handeln",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"}].map(({key,label,col})=>(
                     <button key={key}
-                      onClick={() => { if (gs.actionsLeft<=0) return; setPanel(p=>p===key?null:key); if(key!=="bank") setBankRes(null); if(key!=="player") resetTrade(); }}
-                      disabled={gs.actionsLeft<=0}
-                      style={{ background: panel===key?col:"#3a3f52", border:"2px solid "+(panel===key?col:"transparent"), borderRadius:8, color:"#fff", padding:"11px 6px", fontSize:13, fontWeight:700, cursor:gs.actionsLeft>0?"pointer":"default", opacity:gs.actionsLeft>0?1:0.4 }}>
+                      onClick={()=>{setPanel(p=>p===key?null:key); if(key!=="bank"){setBankRes(null);} if(key!=="player"){resetTrade();}}}
+                      style={{background:panel===key?col:"#3a3f52",border:"2px solid "+(panel===key?col:"transparent"),borderRadius:8,color:"#fff",padding:"11px 6px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
                       {label}
                     </button>
                   ))}
                 </div>
 
-                {panel === "bank" && (
-                  <div style={{ background:"#1b1f2e", borderRadius:10, padding:12, marginTop:10 }}>
-                    <div style={{ color:"#666", fontSize:12, marginBottom:8 }}>{hasHafen?"Hafen: 1:1":"Holz/Stein 2:1 · Getreide 3:1"} → 🪙 Gold</div>
-                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
-                      {["Holz","Stein","Getreide"].map(r => (
-                        <button key={r} onClick={() => { setBankRes(r); setBankAmt(hasHafen?1:BANK_RATES[r]); }}
-                          style={{ background:bankRes===r?"#457b9d":"#252a3a", border:"1px solid "+(bankRes===r?"#457b9d":"#333"), borderRadius:6, color:"#fff", padding:"6px 10px", fontSize:13, cursor:"pointer" }}>
+                {/* Bank */}
+                {panel==="bank"&&(
+                  <div style={{background:"#1b1f2e",borderRadius:10,padding:12,marginTop:10}}>
+                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>{hasHafen?"Hafen: 2:1":"Holz/Stein 3:1 · Getreide 4:1"} → 🪙 Gold</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                      {["Holz","Stein","Getreide"].map(r=>(
+                        <button key={r} onClick={()=>{setBankRes(r);setBankAmt(hasHafen?2:BANK_RATES[r]);}}
+                          style={{background:bankRes===r?"#457b9d":"#252a3a",border:"1px solid "+(bankRes===r?"#457b9d":"#333"),borderRadius:6,color:"#fff",padding:"6px 10px",fontSize:13,cursor:"pointer"}}>
                           {RES_ICONS[r]} {r} ({me.resources[r]||0})
                         </button>
                       ))}
                     </div>
-                    {bankRes && (
-                      <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                        <button onClick={() => setBankAmt(a=>Math.max(hasHafen?1:BANK_RATES[bankRes],a-(hasHafen?1:BANK_RATES[bankRes])))} style={{ background:"#333",border:"none",borderRadius:6,color:"#fff",width:34,height:34,fontSize:18,cursor:"pointer" }}>−</button>
-                        <span style={{ color:"#fff",fontWeight:700,minWidth:24,textAlign:"center" }}>{bankAmt}</span>
-                        <button onClick={() => setBankAmt(a=>Math.min(me.resources[bankRes]||0,a+(hasHafen?1:BANK_RATES[bankRes])))} style={{ background:"#333",border:"none",borderRadius:6,color:"#fff",width:34,height:34,fontSize:18,cursor:"pointer" }}>+</button>
-                        <button onClick={doBankTrade} style={{ flex:1,background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"9px 12px",fontWeight:700,fontSize:14,cursor:"pointer" }}>
-                          Tauschen → +{hasHafen?bankAmt:Math.floor(bankAmt/BANK_RATES[bankRes])} 🪙
+                    {bankRes&&(
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                        <button onClick={()=>setBankAmt(a=>Math.max(hasHafen?2:BANK_RATES[bankRes],a-(hasHafen?2:BANK_RATES[bankRes])))} style={{background:"#333",border:"none",borderRadius:6,color:"#fff",width:34,height:34,fontSize:18,cursor:"pointer"}}>−</button>
+                        <span style={{color:"#fff",fontWeight:700,minWidth:24,textAlign:"center"}}>{bankAmt}</span>
+                        <button onClick={()=>setBankAmt(a=>Math.min(me.resources[bankRes]||0,a+(hasHafen?2:BANK_RATES[bankRes])))} style={{background:"#333",border:"none",borderRadius:6,color:"#fff",width:34,height:34,fontSize:18,cursor:"pointer"}}>+</button>
+                        <button onClick={doBankTrade} style={{flex:1,background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"9px 12px",fontWeight:700,fontSize:14,cursor:"pointer"}}>
+                          Tauschen → +{Math.floor(bankAmt/(hasHafen?2:BANK_RATES[bankRes]))} 🪙
                         </button>
                       </div>
                     )}
                   </div>
                 )}
 
-                {panel === "player" && (
-                  <div style={{ background:"#1b1f2e", borderRadius:10, padding:12, marginTop:10 }}>
-                    <div style={{ color:"#666", fontSize:12, marginBottom:8 }}>Angebot an wen?</div>
-                    <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:10 }}>
-                      {gs.players.map((p,i) => i!==myIndex && (
-                        <button key={i} onClick={() => setPtTarget(i)}
-                          style={{ background:ptTarget===i?p.color+"44":"#252a3a", border:"1px solid "+(ptTarget===i?p.color:"#333"), borderRadius:6, color:"#fff", padding:"6px 10px", fontSize:13, cursor:"pointer" }}>
-                          <span style={{ color:p.color }}>●</span> {p.name}
+                {/* Player trade */}
+                {panel==="player"&&(
+                  <div style={{background:"#1b1f2e",borderRadius:10,padding:12,marginTop:10}}>
+                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>Angebot an wen? (wird sofort reserviert)</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+                      {gs.players.map((p,i)=>i!==myIndex&&(
+                        <button key={i} onClick={()=>setPtTarget(i)}
+                          style={{background:ptTarget===i?p.color+"44":"#252a3a",border:"1px solid "+(ptTarget===i?p.color:"#333"),borderRadius:6,color:"#fff",padding:"6px 10px",fontSize:13,cursor:"pointer"}}>
+                          <span style={{color:p.color}}>●</span> {p.name}
                         </button>
                       ))}
                     </div>
-                    {ptTarget !== null && (
+                    {ptTarget!==null&&(
                       <div>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10 }}>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
                           <div>
-                            <div style={{ color:"#888", fontSize:11, marginBottom:6 }}>Ich gebe:</div>
-                            {RESOURCES.map(r => (
-                              <div key={r} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                                <span style={{ color:"#aaa", fontSize:12 }}>{RES_ICONS[r]} ({me.resources[r]||0})</span>
-                                <ResCounter res={r} val={ptOffer[r]} setVal={v=>setPtOffer(o=>({...o,[r]:v(o[r])}))} max={me.resources[r]||0} />
+                            <div style={{color:"#888",fontSize:11,marginBottom:6}}>Ich gebe:</div>
+                            {RESOURCES.map(r=>(
+                              <div key={r} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                                <span style={{color:"#aaa",fontSize:12}}>{RES_ICONS[r]} ({me.resources[r]||0})</span>
+                                <ResCounter res={r} val={ptOffer[r]} setVal={v=>setPtOffer(o=>({...o,[r]:v(o[r])}))} max={me.resources[r]||0}/>
                               </div>
                             ))}
                           </div>
                           <div>
-                            <div style={{ color:"#888", fontSize:11, marginBottom:6 }}>Ich will:</div>
-                            {RESOURCES.map(r => (
-                              <div key={r} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                                <span style={{ color:"#aaa", fontSize:12 }}>{RES_ICONS[r]} ({gs.players[ptTarget]?gs.players[ptTarget].resources[r]||0:0})</span>
-                                <ResCounter res={r} val={ptWant[r]} setVal={v=>setPtWant(o=>({...o,[r]:v(o[r])}))} max={gs.players[ptTarget]?gs.players[ptTarget].resources[r]||0:0} />
+                            <div style={{color:"#888",fontSize:11,marginBottom:6}}>Ich will:</div>
+                            {RESOURCES.map(r=>(
+                              <div key={r} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                                <span style={{color:"#aaa",fontSize:12}}>{RES_ICONS[r]} ({gs.players[ptTarget]?gs.players[ptTarget].resources[r]||0:0})</span>
+                                <ResCounter res={r} val={ptWant[r]} setVal={v=>setPtWant(o=>({...o,[r]:v(o[r])}))} max={gs.players[ptTarget]?gs.players[ptTarget].resources[r]||0:0}/>
                               </div>
                             ))}
                           </div>
                         </div>
-                        <button onClick={sendTradeOffer} style={{ width:"100%",background:"#9b59b6",border:"none",borderRadius:8,color:"#fff",padding:10,fontWeight:700,fontSize:14,cursor:"pointer" }}>
+                        <button onClick={sendTradeOffer} style={{width:"100%",background:"#9b59b6",border:"none",borderRadius:8,color:"#fff",padding:10,fontWeight:700,fontSize:14,cursor:"pointer"}}>
                           Angebot senden an {gs.players[ptTarget]?gs.players[ptTarget].name:""}
                         </button>
                       </div>
@@ -656,32 +722,34 @@
                   </div>
                 )}
 
-                {panel === "build" && (
-                  <div style={{ background:"#1b1f2e", borderRadius:10, padding:10, marginTop:10 }}>
-                    <div style={{ color:"#666", fontSize:12, marginBottom:8 }}>Bauen / Upgraden — Stufen 1–3</div>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
-                      {BUILDINGS.map(b => {
+                {/* Build */}
+                {panel==="build"&&(
+                  <div style={{background:"#1b1f2e",borderRadius:10,padding:10,marginTop:10}}>
+                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>Bauen / Upgraden — wird am Rundenende angewandt</div>
+                    {me.pendingBuild && <div style={{color:"#f4a261",fontSize:11,marginBottom:8}}>⚠️ Du hast schon ein Gebäude geplant — erst abbrechen!</div>}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                      {BUILDINGS.map(b=>{
                         const cur = me.buildings[b.id]||0;
                         const maxed = cur>=3;
                         const nxt = cur+1;
                         const bd = maxed?b.levels[2]:b.levels[nxt-1];
-                        const ok = !maxed && canAfford(me.resources, bd.cost);
+                        const ok = !maxed && canAfford(me.resources, bd.cost) && !me.pendingBuild;
                         return (
-                          <button key={b.id} onClick={() => ok&&doBuild(b.id)}
-                            style={{ background:maxed?"#1a3a1a":(cur>0?"#1e2a3a":(ok?"#252a3a":"#1b1f2e")), border:"1px solid "+(maxed?"#2a9d8f":(ok?"#444":"#222")), borderRadius:8, padding:"8px 10px", textAlign:"left", cursor:ok?"pointer":"default", opacity:maxed?0.7:(ok?1:(cur>0?0.7:0.4)) }}>
-                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:2 }}>
-                              <div><span style={{ fontSize:14 }}>{b.icon}</span><span style={{ color:"#fff",fontWeight:700,fontSize:12,marginLeft:4 }}>{b.name}</span></div>
-                              <LevelDots level={cur} />
+                          <button key={b.id} onClick={()=>ok&&doBuild(b.id)}
+                            style={{background:maxed?"#1a3a1a":(cur>0?"#1e2a3a":(ok?"#252a3a":"#1b1f2e")),border:"1px solid "+(maxed?"#2a9d8f":(ok?"#444":"#222")),borderRadius:8,padding:"8px 10px",textAlign:"left",cursor:ok?"pointer":"default",opacity:maxed?0.7:(ok?1:(cur>0?0.7:0.4))}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:2}}>
+                              <div><span style={{fontSize:14}}>{b.icon}</span><span style={{color:"#fff",fontWeight:700,fontSize:12,marginLeft:4}}>{b.name}</span></div>
+                              <LevelDots level={cur}/>
                             </div>
-                            <div style={{ color:"#666",fontSize:10,marginBottom:4 }}>
+                            <div style={{color:"#666",fontSize:10,marginBottom:4}}>
                               {maxed?"MAX "+bd.desc:(cur>0?"→ Stufe "+nxt+": "+bd.desc:bd.desc)}
                             </div>
-                            {!maxed && (
-                              <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
-                                {Object.entries(bd.cost).map(([r,v]) => (
-                                  <span key={r} style={{ background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:(me.resources[r]||0)>=v?"#2a9d8f":"#e76f51" }}>{RES_ICONS[r]}{v}</span>
+                            {!maxed&&(
+                              <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                                {Object.entries(bd.cost).map(([r,v])=>(
+                                  <span key={r} style={{background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:(me.resources[r]||0)>=v?"#2a9d8f":"#e76f51"}}>{RES_ICONS[r]}{v}</span>
                                 ))}
-                                <span style={{ background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:"#f4a261" }}>+{bd.vp}VP</span>
+                                <span style={{background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:"#f4a261"}}>+{bd.vp}VP</span>
                               </div>
                             )}
                           </button>
@@ -693,32 +761,92 @@
               </div>
             )}
 
-            {!myTurn && (
-              <div style={{ background:"#252a3a", borderRadius:12, padding:16, marginBottom:10, textAlign:"center" }}>
-                <div style={{ color:cp.color, fontWeight:700, marginBottom:4 }}>{cp.name} ist am Zug…</div>
-                <div style={{ color:"#444", fontSize:12 }}>Warte auf deinen Zug</div>
+            {/* Incoming trade offers */}
+            {offersForMe.length > 0 && (
+              <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+                <div style={{color:"#9b59b6",fontSize:11,letterSpacing:1,marginBottom:8}}>HANDELSANGEBOTE FÜR DICH</div>
+                {offersForMe.map(offer=>(
+                  <div key={offer.id} style={{background:"#1b1f2e",borderRadius:10,padding:12,marginBottom:8}}>
+                    <div style={{color:offer.fromColor,fontWeight:700,fontSize:13,marginBottom:8}}>{offer.fromName} bietet:</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                      <div>
+                        <div style={{color:"#888",fontSize:11,marginBottom:4}}>Du bekommst:</div>
+                        {Object.entries(offer.offer).filter(([,v])=>v>0).map(([r,v])=>(
+                          <div key={r} style={{color:"#2a9d8f",fontSize:14,fontWeight:700}}>{RES_ICONS[r]} {v}x {r}</div>
+                        ))}
+                        {Object.values(offer.offer).every(v=>v===0)&&<div style={{color:"#555"}}>nichts</div>}
+                      </div>
+                      <div>
+                        <div style={{color:"#888",fontSize:11,marginBottom:4}}>Du gibst:</div>
+                        {Object.entries(offer.want).filter(([,v])=>v>0).map(([r,v])=>(
+                          <div key={r} style={{color:"#e76f51",fontSize:14,fontWeight:700}}>{RES_ICONS[r]} {v}x {r}</div>
+                        ))}
+                        {Object.values(offer.want).every(v=>v===0)&&<div style={{color:"#555"}}>nichts</div>}
+                      </div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <button onClick={()=>declineTrade(offer)} style={{background:"#e76f51",border:"none",borderRadius:8,color:"#fff",padding:10,fontWeight:700,cursor:"pointer"}}>❌ Ablehnen</button>
+                      <button onClick={()=>acceptTrade(offer)} style={{background:"#2a9d8f",border:"none",borderRadius:8,color:"#fff",padding:10,fontWeight:700,cursor:"pointer"}}>✅ Annehmen</button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
-            <div style={{ background:"#252a3a", borderRadius:10, padding:"8px 12px", marginBottom:12, maxHeight:90, overflowY:"auto" }}>
-              {(gs.log||[]).map((l,i) => (
-                <div key={i} style={{ color:i===0?"#bbb":"#555", fontSize:12, padding:"2px 0" }}>{l}</div>
+            {/* My outgoing offers */}
+            {myOffers.length > 0 && (
+              <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+                <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>MEINE OFFENEN ANGEBOTE</div>
+                {myOffers.map(offer=>(
+                  <div key={offer.id} style={{background:"#1b1f2e",borderRadius:10,padding:10,marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{color:"#aaa",fontSize:12}}>→ {offer.toName}: {Object.entries(offer.offer).filter(([,v])=>v>0).map(([r,v])=>v+RES_ICONS[r]).join(" ")||"nichts"} für {Object.entries(offer.want).filter(([,v])=>v>0).map(([r,v])=>v+RES_ICONS[r]).join(" ")||"nichts"}</span>
+                    <button onClick={()=>cancelOwnOffer(offer)} style={{background:"#e76f51",border:"none",borderRadius:6,color:"#fff",padding:"4px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Ready button */}
+            <button onClick={markReady} disabled={me.ready}
+              style={{width:"100%",background:me.ready?"#1a3a1a":"#2a9d8f",border:"2px solid "+(me.ready?"#2a9d8f":"#2a9d8f"),borderRadius:12,color:me.ready?"#2a9d8f":"#fff",padding:15,fontSize:16,fontWeight:800,cursor:me.ready?"default":"pointer",marginBottom:10}}>
+              {me.ready?"✓ Du bist bereit ("+readyCount+"/"+gs.players.length+")":"✓ Runde abschließen ("+readyCount+"/"+gs.players.length+" bereit)"}
+            </button>
+
+            {/* Log */}
+            <div style={{background:"#252a3a",borderRadius:10,padding:"8px 12px",marginBottom:10,maxHeight:80,overflowY:"auto"}}>
+              {(gs.log||[]).map((l,i)=>(
+                <div key={i} style={{color:i===0?"#bbb":"#555",fontSize:12,padding:"2px 0"}}>{l}</div>
               ))}
             </div>
 
-            {myTurn && (
-              <button onClick={endTurn}
-                style={{ width:"100%", background:gs.actionsLeft===0?"#e76f51":"#3a3f52", border:"none", borderRadius:12, color:"#fff", padding:15, fontSize:16, fontWeight:800, cursor:"pointer" }}>
-                Zug beenden → {gs.players[(gs.turn+1)%gs.players.length]?gs.players[(gs.turn+1)%gs.players.length].name:""}
-              </button>
-            )}
+            {/* Chat */}
+            <div style={{background:"#252a3a",borderRadius:12}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,padding:"10px 14px 4px"}}>CHAT</div>
+              <div style={{maxHeight:120,overflowY:"auto",padding:"4px 14px 8px"}}>
+                {(gs.chat||[]).length===0&&<div style={{color:"#444",fontSize:12,padding:"4px 0"}}>Noch keine Nachrichten…</div>}
+                {(gs.chat||[]).map((m,i)=>(
+                  <div key={i} style={{marginBottom:4}}>
+                    <span style={{color:m.color,fontWeight:700,fontSize:12}}>{m.name}: </span>
+                    <span style={{color:"#bbb",fontSize:12}}>{m.text}</span>
+                  </div>
+                ))}
+                <div ref={chatEndRef}/>
+              </div>
+              <div style={{display:"flex",gap:8,padding:"0 10px 10px"}}>
+                <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&sendChat()}
+                  placeholder="Nachricht…" maxLength={80}
+                  style={{flex:1,background:"#1b1f2e",border:"1px solid #333",borderRadius:8,padding:"8px 10px",color:"#fff",fontSize:13,outline:"none"}}/>
+                <button onClick={sendChat} style={{background:"#457b9d",border:"none",borderRadius:8,color:"#fff",padding:"8px 14px",fontWeight:700,fontSize:14,cursor:"pointer"}}>➤</button>
+              </div>
+            </div>
 
           </div>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
   </script>
 </body>
 </html>
