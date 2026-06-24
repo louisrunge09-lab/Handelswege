@@ -177,6 +177,64 @@
       .home-sub1  { font-size: 13px !important; }
     }
 
+    /* ── GAME SCREEN ─────────────────────────────────────────────────────── */
+    @keyframes ready-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(42,157,143,0); }
+      50%     { box-shadow: 0 0 14px 3px rgba(42,157,143,0.35); }
+    }
+    @keyframes all-ready-gold {
+      0%,100% { box-shadow: 0 0 14px rgba(233,196,106,0.5), 0 4px 20px rgba(244,162,97,0.3); }
+      50%     { box-shadow: 0 0 32px rgba(233,196,106,0.8), 0 4px 30px rgba(244,162,97,0.5); }
+    }
+    @keyframes count-pop {
+      0%   { transform:scale(1); }
+      40%  { transform:scale(1.22); }
+      100% { transform:scale(1); }
+    }
+
+    .player-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .player-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+    .player-card-me { animation: ready-pulse 2.5s ease-in-out infinite; }
+
+    .action-tab {
+      transition: all 0.15s cubic-bezier(0.4,0,0.2,1) !important;
+    }
+    .action-tab:hover { filter:brightness(1.25); transform:translateY(-3px) !important; }
+    .action-tab:active { transform:scale(0.93) !important; }
+
+    .ready-btn {
+      transition: all 0.2s ease !important;
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+    .ready-btn:hover { filter:brightness(1.1); transform:translateY(-2px) !important; }
+    .all-ready-btn {
+      animation: all-ready-gold 1.1s ease-in-out infinite !important;
+      border-color: #e9c46a !important;
+    }
+    .done-btn { opacity:0.7; }
+
+    .log-msg { animation: fade-up-in 0.3s ease both; }
+    .chat-msg { animation: fade-up-in 0.25s ease both; }
+    .sys-msg  { animation: fade-up-in 0.25s ease both; }
+
+    .res-card:hover .res-inc { color: #3ab8a8 !important; }
+
+    .game-section {
+      background: #1c2030;
+      border: 1px solid #252b3d;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #3a4060;
+    }
+
     .gradient-title {
       background: linear-gradient(135deg,#f4a261,#e76f51,#9b59b6,#457b9d);
       background-size: 300% 300%;
@@ -539,22 +597,31 @@
     function VillageMap({player}) {
       const built = BUILDINGS.filter(b => (player.buildings[b.id]||0) > 0);
       if (built.length === 0) {
-        return <div style={{color:"#444",fontSize:12,padding:"10px 0",textAlign:"center"}}>Noch keine Gebäude gebaut…</div>;
+        return (
+          <div style={{textAlign:"center",padding:"18px 0"}}>
+            <div style={{fontSize:32,marginBottom:8,opacity:0.3}}>🏘️</div>
+            <div style={{color:"#3a4060",fontSize:12}}>Dein Dorf wartet auf seine ersten Gebäude.</div>
+            <div style={{color:"#2a2e42",fontSize:11,marginTop:4}}>Bauen → erstes Gebäude auswählen</div>
+          </div>
+        );
       }
       return (
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,padding:"6px 0"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,padding:"4px 0"}}>
           {built.map(b => {
             const lvl = player.buildings[b.id];
-            const size = 26 + lvl*8; // größer mit höherer Stufe
+            const bd = b.levels[lvl-1];
+            const incomeStr = Object.entries(bd.income||{}).filter(([,v])=>v>0).map(([r,v])=>"+"+v+RES_ICONS[r]).join(" ");
             return (
-              <div key={b.id} style={{
-                background:"linear-gradient(180deg,#2c3349,#1f2433)", borderRadius:10,
-                padding:"10px 4px 6px", textAlign:"center", border:"1px solid #3a4060",
-                position:"relative",
+              <div key={b.id} className="build-card" title={b.name+" Lv"+lvl+(incomeStr?" · "+incomeStr+"/Rd":"")} style={{
+                background:"linear-gradient(180deg,#242c44,#181e30)", borderRadius:10,
+                padding:"10px 4px 7px", textAlign:"center", border:"1px solid "+(lvl===3?"#f4a26155":"#2e3450"),
+                position:"relative", cursor:"default",
               }}>
-                <div style={{fontSize:size, lineHeight:1, marginBottom:4, filter:"drop-shadow(0 2px 3px rgba(0,0,0,0.4))"}}>{b.icon}</div>
-                <div style={{color:"#fff",fontSize:10,fontWeight:700}}>{b.name}</div>
+                {lvl===3&&<div style={{position:"absolute",top:3,right:4,fontSize:8,color:"#f4a261",fontWeight:900}}>MAX</div>}
+                <div style={{fontSize:26+lvl*6, lineHeight:1, marginBottom:4, filter:"drop-shadow(0 2px 4px rgba(0,0,0,0.5))"}}>{b.icon}</div>
+                <div style={{color:"#c8d0e8",fontSize:10,fontWeight:700,marginBottom:3}}>{b.name}</div>
                 <LevelDots level={lvl}/>
+                {incomeStr&&<div style={{color:"#2a9d8f",fontSize:9,marginTop:3,fontWeight:600}}>{incomeStr}</div>}
               </div>
             );
           })}
@@ -1945,10 +2012,16 @@
                 style={{background:"#252a3a",border:"none",borderRadius:8,color:"#fff",padding:"7px 12px",fontSize:18,cursor:"pointer",lineHeight:1}}>
                 ☰
               </button>
-              <span style={{color:"#f4a261",fontWeight:800,fontSize:14}}>Runde {gs.round} · {roomCode}</span>
+              <div style={{textAlign:"center"}}>
+                <div style={{color:"#f4a261",fontWeight:900,fontSize:18,lineHeight:1}}>Runde {gs.round}</div>
+                <div style={{color:"#3a4060",fontSize:10,letterSpacing:1}}>{roomCode} · {(MODES[gs.gameMode]||MODES.normal).label}</div>
+              </div>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {timerSec!==null&&<span style={{color:timerSec<=10?"#e76f51":"#2a9d8f",fontWeight:800,fontSize:15,minWidth:32,textAlign:"center"}}>⏱{timerSec}s</span>}
-                <span style={{color:"#333",fontSize:10}}>{readyCount}/{gs.players.length} bereit</span>
+                {timerSec!==null&&<span style={{color:timerSec<=10?"#e76f51":"#2a9d8f",fontWeight:900,fontSize:16,minWidth:36,textAlign:"center",background:timerSec<=10?"rgba(231,111,81,0.1)":"rgba(42,157,143,0.1)",borderRadius:8,padding:"3px 6px"}}>⏱{timerSec}s</span>}
+                <div style={{textAlign:"center"}}>
+                  <div style={{color:readyCount===gs.players.length?"#e9c46a":"#2a9d8f",fontWeight:700,fontSize:12}}>{readyCount}/{gs.players.length}</div>
+                  <div style={{color:"#3a4060",fontSize:9}}>bereit</div>
+                </div>
               </div>
 
               {/* Dropdown menu */}
@@ -2052,33 +2125,47 @@
             )}
 
             {/* VP board */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat("+gs.players.length+",1fr)",gap:6,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat("+gs.players.length+",1fr)",gap:5,marginBottom:10}}>
               {gs.players.map((p,i)=>{
                 const vp = calcVP(p);
+                const totalRes = RESOURCES.reduce((s,r)=>s+(p.resources[r]||0),0);
+                const isMe = i===myIndex;
+                const allied = isAllied(myIndex,i);
                 return (
-                  <div key={i} style={{background:i===myIndex?p.color+"22":"#252a3a",border:"2px solid "+(i===myIndex?p.color:"#2e2e2e"),borderRadius:10,padding:"8px 4px",textAlign:"center"}}>
-                    <div style={{color:p.color,fontSize:10,fontWeight:700}}>{(p.name.length>6?p.name.slice(0,6)+"…":p.name)}</div>
-                    <div style={{color:"#fff",fontSize:20,fontWeight:900}}>{vp}</div>
-                    <div style={{color:"#444",fontSize:10}}>/ {getWinVP(gs)} VP</div>
-                    <div style={{marginTop:3,height:3,background:"#333",borderRadius:2,overflow:"hidden"}}>
-                      <div className="vp-bar-fill" style={{height:"100%",width:Math.min(100,vp/getWinVP(gs)*100)+"%",background:`linear-gradient(90deg,${p.color},${p.color}cc)`,boxShadow:`0 0 8px ${p.color}88`}}/>
+                  <div key={i} className={"player-card"+(isMe?" player-card-me":"")}
+                    style={{background:isMe?p.color+"18":"#1c2030",border:"2px solid "+(isMe?p.color:p.ready?"#2a9d8f44":"#252b3d"),borderRadius:12,padding:"8px 4px 6px",textAlign:"center",position:"relative"}}>
+                    {/* Ready dot */}
+                    <div style={{position:"absolute",top:5,right:5,width:6,height:6,borderRadius:"50%",background:p.ready?"#2a9d8f":"#333",boxShadow:p.ready?"0 0 6px #2a9d8f":""}}/>
+                    {/* Avatar circle */}
+                    <div style={{width:22,height:22,borderRadius:"50%",background:p.color,margin:"0 auto 4px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:900,color:"#fff",flexShrink:0}}>
+                      {p.name[0].toUpperCase()}
                     </div>
-                    {p.ready && <div style={{color:"#2a9d8f",fontSize:10,marginTop:2}}>✓ bereit</div>}
+                    <div style={{color:p.color,fontSize:9,fontWeight:700,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 4px"}}>
+                      {isMe?"Du":p.name.length>6?p.name.slice(0,6)+"…":p.name}
+                    </div>
+                    <div style={{color:"#fff",fontSize:18,fontWeight:900,lineHeight:1}}>{vp}</div>
+                    <div style={{color:"#3a4060",fontSize:9,marginBottom:3}}>/{getWinVP(gs)}</div>
+                    <div style={{height:3,background:"#252b3d",borderRadius:2,overflow:"hidden",margin:"0 4px"}}>
+                      <div className="vp-bar-fill" style={{height:"100%",width:Math.min(100,vp/getWinVP(gs)*100)+"%",background:`linear-gradient(90deg,${p.color},${p.color}bb)`,boxShadow:`0 0 6px ${p.color}66`}}/>
+                    </div>
+                    <div style={{color:"#3a4060",fontSize:9,marginTop:3}}>
+                      {allied&&i!==myIndex?"🤝 ":""}{totalRes}📦
+                    </div>
                   </div>
                 );
               })}
             </div>
 
             {/* My Resources */}
-            <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>MEINE RESSOURCEN</div>
+            <div className="game-section">
+              <div className="section-label">Meine Ressourcen</div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
                 {RESOURCES.map(r=>(
-                  <div key={r} className="res-card" style={{background:"linear-gradient(160deg,#1e2436,#161b28)",borderRadius:10,padding:"10px 4px",textAlign:"center",border:"1px solid #2a2f42",boxShadow:"0 2px 8px rgba(0,0,0,0.3)"}}>
-                    <div style={{fontSize:18}}>{RES_ICONS[r]}</div>
-                    <div style={{color:"#fff",fontWeight:800,fontSize:20}}>{me.resources[r]||0}</div>
-                    <div style={{color:"#555",fontSize:10}}>{r}</div>
-                    {(myInc[r]||0)>0&&<div style={{color:"#2a9d8f",fontSize:10}}>+{myInc[r]}/Rd</div>}
+                  <div key={r} className="res-card" title={r+(myInc[r]>0?" · +"+myInc[r]+"/Runde":"")} style={{background:"linear-gradient(160deg,#1e2436,#141928)",borderRadius:10,padding:"10px 4px",textAlign:"center",border:"1px solid #252b3d",boxShadow:"0 2px 8px rgba(0,0,0,0.3)"}}>
+                    <div style={{fontSize:20}}>{RES_ICONS[r]}</div>
+                    <div style={{color:"#fff",fontWeight:900,fontSize:22,lineHeight:1.1}}>{me.resources[r]||0}</div>
+                    <div style={{color:"#3a4060",fontSize:9,marginTop:1}}>{r}</div>
+                    <div className="res-inc" style={{color:(myInc[r]||0)>0?"#2a9d8f":"transparent",fontSize:10,fontWeight:700,marginTop:2}}>{(myInc[r]||0)>0?"+"+myInc[r]+"/Rd":"·"}</div>
                   </div>
                 ))}
               </div>
@@ -2099,21 +2186,34 @@
             </div>
 
             {/* Village map */}
-            <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>🏘️ MEIN DORF</div>
+            <div className="game-section">
+              <div className="section-label">🏘️ Mein Dorf</div>
               <VillageMap player={me}/>
             </div>
 
             {/* Actions — only if not ready */}
             {!me.ready && (
-              <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-                <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>AKTIONEN</div>
-                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr 1fr":"1fr 1fr 1fr 1fr 1fr",gap:5}}>
-                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handel",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"},{key:"raid",label:"⚔️ Überfall",col:"#e76f51"},{key:"tech",label:"🔬 Technik",col:"#2a9d8f"}].map(({key,label,col})=>(
-                    <button key={key}
-                      onClick={()=>{setPanel(p=>p===key?null:key); if(key!=="bank"){setBankRes(null);} if(key!=="player"){resetTrade();}}}
-                      style={{background:panel===key?col:"#3a3f52",border:"2px solid "+(panel===key?col:"transparent"),borderRadius:8,color:"#fff",padding:"11px 6px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                      {label}
+              <div className="game-section">
+                <div className="section-label">Aktionen</div>
+                {/* Primary actions */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
+                  {[{key:"build",label:"🏗️",sublabel:"Bauen",col:"#f4a261"},{key:"player",label:"🤝",sublabel:"Handel",col:"#9b59b6"}].map(({key,label,sublabel,col})=>(
+                    <button key={key} className="action-tab"
+                      onClick={()=>{setPanel(p=>p===key?null:key); if(key!=="player")resetTrade();}}
+                      style={{background:panel===key?col+"22":"#13172280",border:"2px solid "+(panel===key?col:"#252b3d"),borderRadius:10,color:panel===key?col:"#8090a8",padding:"12px 6px",fontSize:22,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                      <span>{label}</span>
+                      <span style={{fontSize:11,fontWeight:700}}>{sublabel}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Secondary actions */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5}}>
+                  {[{key:"bank",label:"💱",sublabel:"Bank",col:"#457b9d"},{key:"raid",label:"⚔️",sublabel:"Überfall",col:"#e76f51"},{key:"tech",label:"🔬",sublabel:"Technik",col:"#2a9d8f"}].map(({key,label,sublabel,col})=>(
+                    <button key={key} className="action-tab"
+                      onClick={()=>{setPanel(p=>p===key?null:key); if(key!=="bank")setBankRes(null);}}
+                      style={{background:panel===key?col+"22":"#13172280",border:"1px solid "+(panel===key?col:"#252b3d"),borderRadius:9,color:panel===key?col:"#607088",padding:"9px 4px",fontSize:18,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+                      <span>{label}</span>
+                      <span style={{fontSize:10,color:panel===key?col:"#4a5070",fontWeight:600}}>{sublabel}</span>
                     </button>
                   ))}
                 </div>
@@ -2277,7 +2377,7 @@
 
             {/* Raid panel */}
             {panel==="raid"&&!me.ready&&(
-              <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+              <div className="game-section">
                 <div style={{color:"#e76f51",fontSize:11,letterSpacing:1,marginBottom:8}}>⚔️ ÜBERFALL & SABOTAGE</div>
                 {/* Tab switcher */}
                 <div style={{display:"flex",gap:6,marginBottom:10}}>
@@ -2372,7 +2472,7 @@
 
             {/* Tech panel */}
             {panel==="tech"&&!me.ready&&(
-              <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+              <div className="game-section">
                 <div style={{color:"#2a9d8f",fontSize:11,letterSpacing:1,marginBottom:8}}>🔬 TECHNOLOGIE — einmalige Effekte diese Runde</div>
                 {(me.activeTechs||[]).length>0&&(
                   <div style={{marginBottom:8,display:"flex",gap:5,flexWrap:"wrap"}}>
@@ -2446,16 +2546,40 @@
             )}
 
             {/* Ready button */}
-            <button onClick={markReady}
-              className={me.ready?"":"btn-ready"}
-              style={{width:"100%",background:me.ready?"#1a3a1a":"linear-gradient(135deg,#2a9d8f,#21867a)",border:"2px solid #2a9d8f",borderRadius:12,color:me.ready?"#2a9d8f":"#fff",padding:15,fontSize:16,fontWeight:800,cursor:"pointer",marginBottom:10,transition:"all 0.2s"}}>
-              {me.ready?"↩ Bereit aufheben ("+readyCount+"/"+gs.players.length+")":"✓ Runde abschließen ("+readyCount+"/"+gs.players.length+" bereit)"}
-            </button>
+            {(() => {
+              const allReady = readyCount === gs.players.length;
+              return (
+                <button onClick={markReady}
+                  className={me.ready?(allReady?"all-ready-btn done-btn":"done-btn"):"ready-btn"}
+                  style={{
+                    width:"100%",
+                    background: me.ready
+                      ? (allReady?"linear-gradient(135deg,#2a1a00,#1a1500)":"#111820")
+                      : "linear-gradient(135deg,#2a9d8f,#1d7a70)",
+                    border:"2px solid "+(allReady?"#e9c46a":"#2a9d8f"),
+                    borderRadius:12,
+                    color: me.ready?(allReady?"#e9c46a":"#2a9d8f"):"#fff",
+                    padding:"14px 0",fontSize:15,fontWeight:800,cursor:"pointer",marginBottom:10,
+                  }}>
+                  {me.ready
+                    ? (allReady
+                        ? "⚡ Alle bereit — Runde läuft… ("+readyCount+"/"+gs.players.length+")"
+                        : "↩ Bereit aufheben  ("+readyCount+"/"+gs.players.length+" bereit)")
+                    : "✓ Runde abschließen  ("+readyCount+"/"+gs.players.length+" bereit)"}
+                </button>
+              );
+            })()}
 
             {/* Log */}
-            <div style={{background:"#252a3a",borderRadius:10,padding:"8px 12px",marginBottom:10,maxHeight:80,overflowY:"auto"}}>
+            <div style={{background:"#13172280",border:"1px solid #1e2235",borderRadius:10,padding:"8px 12px",marginBottom:10,maxHeight:90,overflowY:"auto"}}>
               {(gs.log||[]).map((l,i)=>(
-                <div key={i} style={{color:i===0?"#bbb":"#555",fontSize:12,padding:"2px 0"}}>{l}</div>
+                <div key={i} className="log-msg" style={{
+                  color:i===0?"#8090b0":"#3a4060",
+                  fontSize:11,padding:"2px 0",
+                  borderBottom:i===0?"1px solid #1e2235":"none",
+                  marginBottom:i===0?4:0,
+                  fontWeight:i===0?500:400,
+                }}>{l}</div>
               ))}
             </div>
 
@@ -2480,20 +2604,30 @@
               <span>💬 CHAT</span>
               {isMobile && <span style={{color:"#444",fontSize:14}}>{chatOpen?"▼":"▲"}</span>}
             </div>
-            <div style={{flex:1,overflowY:"auto",padding:"6px 12px",minHeight:0}}>
-              {(gs.chat||[]).length===0&&<div style={{color:"#444",fontSize:13,padding:"8px 0"}}>Noch keine Nachrichten…</div>}
-              {(gs.chat||[]).filter(m => m.to==null || m.from===myIndex || m.to===myIndex).map((m,i)=>(
-                <div key={i} style={{marginBottom:6}}>
-                  {m.to!=null && (
-                    <span style={{color:"#9b59b6",fontSize:10,fontWeight:700,marginRight:4}}>
-                      🔒 {m.from===myIndex ? "an "+m.toName : "privat"}
-                    </span>
-                  )}
-                  <span style={{color:m.color,fontWeight:700,fontSize:13}}>{m.name}</span>
-                  <span style={{color:"#444",fontSize:11}}> · </span>
-                  <span style={{color:"#bbb",fontSize:13}}>{m.text}</span>
+            <div style={{flex:1,overflowY:"auto",padding:"8px 12px",minHeight:0}}>
+              {(gs.chat||[]).length===0&&(
+                <div style={{color:"#2a2e42",fontSize:12,padding:"12px 0",textAlign:"center"}}>
+                  <div style={{fontSize:20,marginBottom:4,opacity:0.3}}>💬</div>
+                  Noch keine Nachrichten…
                 </div>
-              ))}
+              )}
+              {(gs.chat||[]).filter(m => m.to==null || m.from===myIndex || m.to===myIndex).map((m,i)=>{
+                const isMe = m.from===myIndex;
+                const isPrivate = m.to!=null;
+                const ts = m.t ? new Date(m.t).toLocaleTimeString("de",{hour:"2-digit",minute:"2-digit"}) : "";
+                return (
+                  <div key={i} className="chat-msg" style={{marginBottom:8,padding:"6px 8px",borderRadius:8,background:isMe?"rgba(69,123,157,0.1)":isPrivate?"rgba(155,89,182,0.08)":"transparent",border:isPrivate?"1px solid rgba(155,89,182,0.2)":"none"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:2}}>
+                      <span style={{display:"flex",alignItems:"center",gap:4}}>
+                        {isPrivate&&<span style={{color:"#9b59b6",fontSize:9,fontWeight:700}}>🔒{isMe?"→"+m.toName:"privat"}</span>}
+                        <span style={{color:m.color,fontWeight:700,fontSize:12}}>{m.name}</span>
+                      </span>
+                      <span style={{color:"#2a2e42",fontSize:9}}>{ts}</span>
+                    </div>
+                    <div style={{color:isMe?"#c8d8ff":"#8090a8",fontSize:12,lineHeight:1.4}}>{m.text}</div>
+                  </div>
+                );
+              })}
               <div ref={chatEndRef}/>
             </div>
             <div style={{padding:"6px 10px 0",borderTop:"1px solid #252a3a",flexShrink:0}}>
