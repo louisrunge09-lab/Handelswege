@@ -211,6 +211,9 @@
       { cost: { Gold: 4 }, steal: 3, desc: "Klaut 3 zufällige Res." },
     ];
 
+    // Sabotage-Kosten in Gold je nach Gebäudestufe
+    const SABOTAGE_COST = { 1: 5, 2: 9, 3: 14 };
+
     // Technologiekarten — einmalige Effekte, pro Runde kaufbar
     const TECH_CARDS = [
       { id:"doppel",   label:"⚡ Doppeleinkommen", desc:"Diese Runde 2× Einkommen",       cost:{Gold:4} },
@@ -329,6 +332,7 @@
         ready: false,
         pendingBuilds: [],
         pendingRaeuber: null,
+        pendingSabotage: null,
       }));
       return {
         players: ps,
@@ -680,6 +684,7 @@
       const [isSpectator, setIsSpectator] = useState(false);
       const [isMobile, setIsMobile] = useState(() => window.innerWidth < 700);
       const [chatOpen, setChatOpen] = useState(false);
+      const [raidTab, setRaidTab] = useState("raid"); // "raid" | "sabotage"
       const chatEndRef = useRef(null);
 
       const sb = useRef(makeSB());
@@ -1104,6 +1109,29 @@
         await push(g);
       }
 
+      async function doSabotage(targetIdx, bid) {
+        if (!me || me.ready) return;
+        const lvl = gs.players[targetIdx]?.buildings[bid] || 0;
+        if (lvl === 0) return;
+        const cost = { Gold: SABOTAGE_COST[lvl] };
+        if (!canAfford(me.resources, cost)) return;
+        const newPlayers = [...gs.players];
+        newPlayers[myIndex] = {...me, resources: deduct(me.resources, cost), pendingSabotage: {target: targetIdx, bid}};
+        const bName = BUILDINGS.find(b=>b.id===bid)?.name || bid;
+        let g = addLog({...gs, players: newPlayers}, me.name+" plant Sabotage: "+gs.players[targetIdx].name+"s "+bName);
+        setPanel(null);
+        await push(g);
+      }
+
+      async function cancelSabotage() {
+        if (!me || me.ready || !me.pendingSabotage) return;
+        const lvl = gs.players[me.pendingSabotage.target]?.buildings[me.pendingSabotage.bid] || 1;
+        const refunded = {...me.resources, Gold: (me.resources.Gold||0) + SABOTAGE_COST[lvl]};
+        const newPlayers = [...gs.players];
+        newPlayers[myIndex] = {...me, resources: refunded, pendingSabotage: null};
+        await push({...gs, players: newPlayers});
+      }
+
       async function breakAlliance(targetIdx) {
         const newAlliances = (gs.alliances||[]).filter(a=>!((a.a===myIndex&&a.b===targetIdx)||(a.a===targetIdx&&a.b===myIndex)));
         let g = addLog({...gs, alliances:newAlliances}, "💔 "+me.name+" bricht Allianz mit "+gs.players[targetIdx].name+"!");
@@ -1284,6 +1312,27 @@
             newStats.raidsReceived[target] = (newStats.raidsReceived[target]||0)+1;
           });
           resolved = resolved.map(p => ({...p, pendingRaeuber: null}));
+
+          // Apply sabotages
+          newPlayers.forEach((p, i) => {
+            if (!p.pendingSabotage) return;
+            const {target, bid} = p.pendingSabotage;
+            const victim = resolved[target];
+            const curLvl = victim.buildings[bid] || 0;
+            const bName = BUILDINGS.find(b=>b.id===bid)?.name || bid;
+            if (curLvl === 0) {
+              raidLogs.push("💣 "+p.name+" sabotiert "+victim.name+"s "+bName+" — schon zerstört!");
+            } else {
+              const newBuildings = {...victim.buildings};
+              if (curLvl === 1) delete newBuildings[bid];
+              else newBuildings[bid] = curLvl - 1;
+              resolved[target] = {...victim, buildings: newBuildings};
+              raidLogs.push("💣 "+p.name+" sabotiert "+victim.name+"s "+bName+"! "+(curLvl===1?"🔥 Zerstört!":"⬇️ Lv"+curLvl+"→Lv"+(curLvl-1)));
+              newStats.raidsReceived[target] = (newStats.raidsReceived[target]||0)+1;
+            }
+            resolved[i] = {...resolved[i], pendingSabotage: null};
+          });
+          resolved = resolved.map(p => ({...p, pendingSabotage: null}));
 
           // Finanzamt — pro Spieler eigene Chance, Burg schützt, Frieden-Event überspringt
           if (!activeEvent?.skipFinanzamt) {
@@ -2023,41 +2072,95 @@
             {/* Raid panel */}
             {panel==="raid"&&!me.ready&&(
               <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-                <div style={{color:"#e76f51",fontSize:11,letterSpacing:1,marginBottom:8}}>🏛️ FINANZAMT — klaut am Rundenende, keine Siegpunkte</div>
-                {me.pendingRaeuber && (
-                  <div style={{background:"#1b1f2e",borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <span style={{color:"#e76f51",fontSize:13}}>🗡️ Überfall auf {gs.players[me.pendingRaeuber.target]?.name} (Stufe {me.pendingRaeuber.level}) geplant</span>
-                    <button onClick={cancelRaid} style={{background:"#555",border:"none",borderRadius:6,color:"#fff",padding:"4px 10px",fontSize:12,cursor:"pointer"}}>Abbrechen</button>
-                  </div>
-                )}
-                {!me.pendingRaeuber && (
-                  <div>
-                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>Wen überfallen?</div>
-                    {gs.players.map((p,i)=>i!==myIndex&&(
-                      <div key={i} style={{background:"#1b1f2e",borderRadius:10,padding:10,marginBottom:8}}>
-                        <div style={{color:p.color,fontWeight:700,fontSize:13,marginBottom:8}}>{p.name}</div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-                          {RAEUBER_LEVELS.map((rd,lvl)=>{
-                            const ok = canAfford(me.resources, rd.cost);
-                            return (
-                              <button key={lvl} onClick={()=>ok&&doRaid(i,lvl+1)}
-                                style={{background:ok?"#3a1a1a":"#1b1f2e",border:"1px solid "+(ok?"#e76f51":"#333"),borderRadius:8,padding:"8px 6px",cursor:ok?"pointer":"default",opacity:ok?1:0.4}}>
-                                <div style={{color:"#e76f51",fontSize:16,marginBottom:2}}>{"🗡️".repeat(lvl+1)}</div>
-                                <div style={{color:"#e76f51",fontSize:10,fontWeight:700}}>Stufe {lvl+1}</div>
-                                <div style={{color:"#888",fontSize:10}}>{rd.desc}</div>
-                                <div style={{display:"flex",gap:2,justifyContent:"center",marginTop:4}}>
-                                  {Object.entries(rd.cost).map(([r,v])=>(
-                                    <span key={r} style={{background:"#333",borderRadius:3,padding:"1px 4px",fontSize:10,color:(me.resources[r]||0)>=v?"#e76f51":"#555"}}>{RES_ICONS[r]}{v}</span>
-                                  ))}
-                                </div>
-                              </button>
-                            );
-                          })}
+                <div style={{color:"#e76f51",fontSize:11,letterSpacing:1,marginBottom:8}}>🏛️ FINANZAMT & SABOTAGE</div>
+                {/* Tab switcher */}
+                <div style={{display:"flex",gap:6,marginBottom:10}}>
+                  {[{id:"raid",label:"🗡️ Überfall"},{id:"sabotage",label:"💣 Sabotage"}].map(t=>(
+                    <button key={t.id} onClick={()=>setRaidTab(t.id)}
+                      style={{flex:1,background:raidTab===t.id?"#e76f5122":"#1b1f2e",border:"1px solid "+(raidTab===t.id?"#e76f51":"#333"),borderRadius:8,color:raidTab===t.id?"#e76f51":"#666",padding:"7px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Überfall tab */}
+                {raidTab==="raid"&&(<>
+                  {me.pendingRaeuber && (
+                    <div style={{background:"#1b1f2e",borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                      <span style={{color:"#e76f51",fontSize:13}}>🗡️ Überfall auf {gs.players[me.pendingRaeuber.target]?.name} (Stufe {me.pendingRaeuber.level}) geplant</span>
+                      <button onClick={cancelRaid} style={{background:"#555",border:"none",borderRadius:6,color:"#fff",padding:"4px 10px",fontSize:12,cursor:"pointer"}}>Abbrechen</button>
+                    </div>
+                  )}
+                  {!me.pendingRaeuber && (
+                    <div>
+                      <div style={{color:"#666",fontSize:12,marginBottom:8}}>Wen überfallen?</div>
+                      {gs.players.map((p,i)=>i!==myIndex&&(
+                        <div key={i} style={{background:"#1b1f2e",borderRadius:10,padding:10,marginBottom:8}}>
+                          <div style={{color:p.color,fontWeight:700,fontSize:13,marginBottom:8}}>{p.name}</div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+                            {RAEUBER_LEVELS.map((rd,lvl)=>{
+                              const ok = canAfford(me.resources, rd.cost);
+                              return (
+                                <button key={lvl} onClick={()=>ok&&doRaid(i,lvl+1)}
+                                  style={{background:ok?"#3a1a1a":"#1b1f2e",border:"1px solid "+(ok?"#e76f51":"#333"),borderRadius:8,padding:"8px 6px",cursor:ok?"pointer":"default",opacity:ok?1:0.4}}>
+                                  <div style={{color:"#e76f51",fontSize:16,marginBottom:2}}>{"🗡️".repeat(lvl+1)}</div>
+                                  <div style={{color:"#e76f51",fontSize:10,fontWeight:700}}>Stufe {lvl+1}</div>
+                                  <div style={{color:"#888",fontSize:10}}>{rd.desc}</div>
+                                  <div style={{display:"flex",gap:2,justifyContent:"center",marginTop:4}}>
+                                    {Object.entries(rd.cost).map(([r,v])=>(
+                                      <span key={r} style={{background:"#333",borderRadius:3,padding:"1px 4px",fontSize:10,color:(me.resources[r]||0)>=v?"#e76f51":"#555"}}>{RES_ICONS[r]}{v}</span>
+                                    ))}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </>)}
+
+                {/* Sabotage tab */}
+                {raidTab==="sabotage"&&(<>
+                  {me.pendingSabotage && (
+                    <div style={{background:"#1b1f2e",borderRadius:8,padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                      <span style={{color:"#e76f51",fontSize:13}}>💣 Sabotage: {gs.players[me.pendingSabotage.target]?.name}s {BUILDINGS.find(b=>b.id===me.pendingSabotage.bid)?.name}</span>
+                      <button onClick={cancelSabotage} style={{background:"#555",border:"none",borderRadius:6,color:"#fff",padding:"4px 10px",fontSize:12,cursor:"pointer"}}>Abbrechen</button>
+                    </div>
+                  )}
+                  {!me.pendingSabotage && (
+                    <div>
+                      <div style={{color:"#666",fontSize:12,marginBottom:8}}>Welches Gebäude sabotieren? (Kosten: Lv1=5🪙 Lv2=9🪙 Lv3=14🪙)</div>
+                      {gs.players.map((p,i)=>{
+                        if (i===myIndex) return null;
+                        const built = BUILDINGS.filter(b=>(p.buildings[b.id]||0)>0);
+                        if (built.length===0) return null;
+                        return (
+                          <div key={i} style={{background:"#1b1f2e",borderRadius:10,padding:10,marginBottom:8}}>
+                            <div style={{color:p.color,fontWeight:700,fontSize:13,marginBottom:8}}>{p.name}</div>
+                            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                              {built.map(b=>{
+                                const lvl = p.buildings[b.id];
+                                const cost = SABOTAGE_COST[lvl];
+                                const ok = (me.resources.Gold||0) >= cost;
+                                return (
+                                  <button key={b.id} onClick={()=>ok&&doSabotage(i,b.id)}
+                                    style={{background:ok?"#3a1a1a":"#1b1f2e",border:"1px solid "+(ok?"#e76f51":"#333"),borderRadius:8,padding:"8px 10px",cursor:ok?"pointer":"default",opacity:ok?1:0.4,textAlign:"center"}}>
+                                    <div style={{fontSize:20}}>{b.icon}</div>
+                                    <div style={{color:"#fff",fontSize:10,fontWeight:700}}>{b.name}</div>
+                                    <div style={{color:"#e76f51",fontSize:10}}>Lv{lvl} → {lvl>1?"Lv"+(lvl-1):"🔥"}</div>
+                                    <div style={{color:(me.resources.Gold||0)>=cost?"#e76f51":"#555",fontSize:11,fontWeight:700}}>🪙{cost}</div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>)}
               </div>
             )}
 
