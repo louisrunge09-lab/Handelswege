@@ -197,7 +197,7 @@
         round: 1,
         phase: "playing",
         gameMode: mode,
-        log: ["Runde 1 beginnt — alle spielen gleichzeitig! Ziel: " + (mode === "normal" ? WIN_VP_NORMAL : WIN_VP_QUICKPLAY) + " VP"],
+        log: ["Runde 1 beginnt — alle spielen gleichzeitig! Ziel: " + (MODES[mode] || MODES.normal).winVP + " VP"],
         chat: [],
         tradeOffers: [],
         winner: null,
