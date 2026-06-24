@@ -211,6 +211,16 @@
       { cost: { Gold: 4 }, steal: 3, desc: "Klaut 3 zufällige Res." },
     ];
 
+    // Technologiekarten — einmalige Effekte, pro Runde kaufbar
+    const TECH_CARDS = [
+      { id:"doppel",   label:"⚡ Doppeleinkommen", desc:"Diese Runde 2× Einkommen",       cost:{Gold:4} },
+      { id:"steuer",   label:"🛡️ Steuerberater",  desc:"Finanzamt überspringt dich",      cost:{Gold:5} },
+      { id:"haendler", label:"🔄 Händler",         desc:"Alle Bank-Tausche 2:1 diese Runde",cost:{Gold:3} },
+      { id:"bauboom",  label:"🏗️ Bauboom",         desc:"+1 Bauplatz diese Runde (max 4)", cost:{Gold:5} },
+      { id:"ernte2",   label:"🌾 Sonderernte",     desc:"Sofort +5 Getreide",              cost:{Gold:2} },
+      { id:"schatz",   label:"🪙 Schatzsuche",     desc:"Sofort +4 Gold",                 cost:{Stein:3,Holz:3} },
+    ];
+
     // Ereigniskarten — jede Runde 40% Chance auf ein Ereignis
     const EVENTS = [
       { id:"durre",      label:"🌵 Dürre",       desc:"Alle verlieren 2 Getreide",       apply:(ps)=>ps.map(p=>({...p,resources:{...p.resources,Getreide:Math.max(0,(p.resources.Getreide||0)-2)}})) },
@@ -531,6 +541,36 @@
       return p;
     }
 
+    // ── TUTORIAL ─────────────────────────────────────────────────────────────
+    function TutorialOverlay({onClose}) {
+      const steps = [
+        { icon:"🏗️", title:"Bauen & Upgraden", text:"Kaufe Gebäude um Einkommen und Siegpunkte zu bekommen. Teurere Gebäude brauchen günstigere als Voraussetzung." },
+        { icon:"💱", title:"Bank & Handel",     text:"Tausche Ressourcen bei der Bank (3:1 oder 4:1). Mit Hafen 2:1. Oder handel direkt mit anderen Spielern." },
+        { icon:"🏛️", title:"Finanzamt",         text:"Greife Gegner an — kostet Gold, klaut ihre Ressourcen. Aber Vorsicht: Das Finanzamt prüft auch dich wenn du reich bist!" },
+        { icon:"🤝", title:"Allianzen & Tech",  text:"Schließe Allianzen (kein Raid für 3 Runden) und kaufe Technologiekarten für besondere Vorteile." },
+        { icon:"🎲", title:"Ereignisse",        text:"Jede Runde kann ein zufälliges Ereignis kommen — gut oder schlecht. Burg schützt vor dem Finanzamt." },
+      ];
+      const [step, setStep] = React.useState(0);
+      return (
+        <div style={{position:"fixed",inset:0,zIndex:500,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#1b1f2e",borderRadius:16,padding:"24px 20px",maxWidth:360,width:"100%",textAlign:"center"}}>
+            <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:12}}>ANLEITUNG {step+1}/{steps.length}</div>
+            <div style={{fontSize:52,marginBottom:12}}>{steps[step].icon}</div>
+            <div style={{color:"#f4a261",fontWeight:900,fontSize:18,marginBottom:10}}>{steps[step].title}</div>
+            <div style={{color:"#aaa",fontSize:14,lineHeight:1.6,marginBottom:20}}>{steps[step].text}</div>
+            <div style={{display:"flex",gap:8}}>
+              {step > 0 && <button onClick={()=>setStep(s=>s-1)} style={{flex:1,background:"#252a3a",border:"none",borderRadius:10,color:"#aaa",padding:12,fontSize:14,cursor:"pointer"}}>← Zurück</button>}
+              {step < steps.length-1
+                ? <button onClick={()=>setStep(s=>s+1)} style={{flex:2,background:"#f4a261",border:"none",borderRadius:10,color:"#1b1f2e",padding:12,fontWeight:800,fontSize:14,cursor:"pointer"}}>Weiter →</button>
+                : <button onClick={onClose} style={{flex:2,background:"#2a9d8f",border:"none",borderRadius:10,color:"#fff",padding:12,fontWeight:800,fontSize:14,cursor:"pointer"}}>Los geht's! 🚀</button>
+              }
+            </div>
+            <button onClick={onClose} style={{background:"none",border:"none",color:"#444",fontSize:12,marginTop:12,cursor:"pointer",padding:4}}>Nicht mehr zeigen</button>
+          </div>
+        </div>
+      );
+    }
+
     // ── ROUND SUMMARY MODAL ──────────────────────────────────────────────────
     function RoundSummaryModal({summary, onClose}) {
       if (!summary) return null;
@@ -590,6 +630,10 @@
       const [feedback, setFeedback] = useState("");
       const [isSolo, setIsSolo] = useState(false);
       const [soloMode, setSoloMode] = useState("normal");
+      const [numAI, setNumAI] = useState(1);
+      const [timerSec, setTimerSec] = useState(null);
+      const timerRef = useRef(null);
+      const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem("hwt"));
       const [floaters, setFloaters] = useState([]);
       const prevResRef = useRef(null);
 
@@ -727,6 +771,28 @@
         }
       }, [gs && gs.round]);
 
+      // Timer countdown — auto-ready wenn timeLimit aktiv
+      useEffect(() => {
+        if (!gs || gs.phase !== "playing" || !gs.timeLimit || !me || me.ready) {
+          setTimerSec(null);
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+          return;
+        }
+        if (timerRef.current) clearInterval(timerRef.current);
+        setTimerSec(gs.timeLimit);
+        timerRef.current = setInterval(() => {
+          setTimerSec(s => {
+            if (s <= 1) {
+              clearInterval(timerRef.current); timerRef.current = null;
+              markReady();
+              return null;
+            }
+            return s - 1;
+          });
+        }, 1000);
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+      }, [gs && gs.round, me && me.ready]);
+
       function subscribe(code) {
         if (unsubRef.current) unsubRef.current();
         unsubRef.current = sb.current.subscribe(code, newState => setGs(newState));
@@ -744,14 +810,10 @@
         if (!myName.trim()) { setError("Bitte Namen eingeben"); return; }
         const players = [
           { name: myName.trim(), color: PLAYER_COLORS[0] },
-          { name: "KI 🤖", color: PLAYER_COLORS[1] },
+          ...Array.from({length:numAI}, (_,i) => ({ name: "KI "+(numAI>1?i+1:"")+" 🤖".trim(), color: PLAYER_COLORS[i+1] })),
         ];
         const state = initGameState(players, soloMode);
-        setIsSolo(true);
-        setMyIndex(0);
-        setIsHost(true);
-        setGs(state);
-        setScreen("game");
+        setIsSolo(true); setMyIndex(0); setIsHost(true); setGs(state); setScreen("game");
       }
 
       function addLog(g, msg) { return {...g, log:[msg,...(g.log||[])].slice(0,60)}; }
@@ -822,7 +884,8 @@
       async function doBuild(bid) {
         if (!me || me.ready) return;
         const pending = me.pendingBuilds || [];
-        if (pending.length >= MAX_BUILDS_PER_ROUND) return;
+        const maxBuilds = (me.activeTechs||[]).includes("bauboom") ? MAX_BUILDS_PER_ROUND+1 : MAX_BUILDS_PER_ROUND;
+        if (pending.length >= maxBuilds) return;
         const b = BUILDINGS.find(x => x.id === bid);
         const alreadyPlannedForThis = pending.filter(pb => pb.bid === bid).length;
         const cur = (me.buildings[bid] || 0) + alreadyPlannedForThis;
@@ -964,6 +1027,21 @@
         await push({...gs, players: newPlayers});
       }
 
+      async function doTech(tc) {
+        if (!me || me.ready) return;
+        if (!canAfford(me.resources, tc.cost)) return;
+        let newRes = deduct(me.resources, tc.cost);
+        const techs = [...(me.activeTechs||[]), tc.id];
+        // Sofort-Effekte
+        if (tc.id === "ernte2") newRes = {...newRes, Getreide: (newRes.Getreide||0)+5};
+        if (tc.id === "schatz") newRes = {...newRes, Gold: (newRes.Gold||0)+4};
+        const newPlayers = [...gs.players];
+        newPlayers[myIndex] = {...me, resources: newRes, activeTechs: techs};
+        let g = addLog({...gs, players: newPlayers}, me.name+" kauft Technologie: "+tc.label);
+        setPanel(null);
+        await push(g);
+      }
+
       async function proposeAlliance(targetIdx) {
         if (!me || me.ready) return;
         const already = (gs.allianceOffers||[]).find(o=>o.from===myIndex&&o.to===targetIdx);
@@ -1072,10 +1150,11 @@
         const newPlayers = [...freshGs.players];
         newPlayers[myIndex] = {...freshMe, ready: true};
 
-        // Solo: KI zieht sofort
+        // Solo: alle KI-Spieler ziehen sofort
         if (isSolo) {
-          const aiIdx = myIndex === 0 ? 1 : 0;
-          newPlayers[aiIdx] = runAI(freshGs, aiIdx);
+          for (let i = 0; i < freshGs.players.length; i++) {
+            if (i !== myIndex) newPlayers[i] = runAI(freshGs, i);
+          }
         }
 
         let g = {...freshGs, players: newPlayers};
@@ -1091,12 +1170,14 @@
           // Expire old alliances
           const activeAlliances = (freshGs.alliances||[]).filter(a => a.endsAfter > freshGs.round);
 
-          // Resolve builds + income
+          // Resolve builds + income (+ tech effects)
           let resolved = newPlayers.map(p => {
-            let np = {...p, ready: false, buildings: {...(p.buildings||{})}};
+            const techs = p.activeTechs || [];
+            let np = {...p, ready: false, buildings: {...(p.buildings||{})}, activeTechs: []};
             for (const pb of (np.pendingBuilds||[])) np.buildings[pb.bid] = pb.level;
             np.pendingBuilds = [];
             np = applyIncome(np, gMode);
+            if (techs.includes("doppel")) np = applyIncome(np, gMode); // 2× Einkommen
             return np;
           });
 
@@ -1157,6 +1238,9 @@
           // Finanzamt — pro Spieler eigene Chance, Burg schützt, Frieden-Event überspringt
           if (!activeEvent?.skipFinanzamt) {
             resolved.forEach((p, vi) => {
+              if ((p.activeTechs||[]).includes("steuer")) {
+                raidLogs.push("🛡️ "+p.name+" hat Steuerberater — Finanzamt zieht weiter!"); return;
+              }
               const total = RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0);
               if (total < FINANZAMT_MIN_VERMOEGEN) return;
               const burgLvl = p.buildings?.burg || 0;
@@ -1246,21 +1330,26 @@
             {/* Solo vs KI */}
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px",marginBottom:12}}>
               <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:8}}>SOLO VS KI</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10}}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8}}>
                 {Object.entries(MODES).map(([id,m])=>(
                   <button key={id} onClick={()=>setSoloMode(id)}
-                    style={{
-                      background:soloMode===id?"#9b59b622":"#1b1f2e",
-                      border:"2px solid "+(soloMode===id?"#9b59b6":"#333"),
-                      borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center",
-                    }}>
+                    style={{background:soloMode===id?"#9b59b622":"#1b1f2e",border:"2px solid "+(soloMode===id?"#9b59b6":"#333"),borderRadius:8,padding:"8px 4px",cursor:"pointer",textAlign:"center"}}>
                     <div style={{color:"#fff",fontWeight:700,fontSize:11}}>{m.label}</div>
                     <div style={{color:soloMode===id?"#9b59b6":"#444",fontSize:10}}>{m.winVP} VP</div>
                   </button>
                 ))}
               </div>
+              <div style={{display:"flex",gap:6,marginBottom:10}}>
+                <div style={{color:"#555",fontSize:11,lineHeight:"28px"}}>KI-Gegner:</div>
+                {[1,2,3].map(n=>(
+                  <button key={n} onClick={()=>setNumAI(n)}
+                    style={{flex:1,background:numAI===n?"#9b59b633":"#1b1f2e",border:"1px solid "+(numAI===n?"#9b59b6":"#333"),borderRadius:7,color:numAI===n?"#c39bd3":"#666",padding:"5px 0",fontSize:12,cursor:"pointer",fontWeight:700}}>
+                    {n} 🤖
+                  </button>
+                ))}
+              </div>
               <button onClick={startSolo} disabled={loading} className="btn-primary" style={{width:"100%",background:"linear-gradient(135deg,#9b59b6,#8e44ad)",border:"none",borderRadius:10,color:"#fff",padding:13,fontSize:15,fontWeight:700,cursor:"pointer",boxShadow:"0 4px 20px rgba(155,89,182,0.4)"}}>
-                🤖 Solo gegen KI spielen
+                🤖 Solo gegen {numAI} KI spielen
               </button>
             </div>
             <div style={{background:"#252a3a",borderRadius:14,padding:"14px 16px"}}>
@@ -1281,8 +1370,12 @@
                 {feedback}
               </div>
             )}
-            <div style={{textAlign:"center",color:"#333",fontSize:11,marginTop:18}}>{VERSION}</div>
+            <div style={{textAlign:"center",marginTop:14}}>
+              <button onClick={()=>setShowTutorial(true)} style={{background:"none",border:"none",color:"#444",fontSize:12,cursor:"pointer"}}>❓ Wie spielt man?</button>
+              <span style={{color:"#2a2a2a",fontSize:11,marginLeft:12}}>{VERSION}</span>
+            </div>
           </div>
+          {showTutorial && <TutorialOverlay onClose={()=>{setShowTutorial(false);localStorage.setItem("hwt","1");}}/>}
         </div>
       );
 
@@ -1364,6 +1457,42 @@
                   🗑 Lobby löschen
                 </button>
               )}
+            </div>
+            {/* Timer toggle */}
+            {isHost && (
+              <div style={{background:"#252a3a",borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{color:"#fff",fontSize:13,fontWeight:700}}>⏱ Rundenzeit-Limit</div>
+                  <div style={{color:"#555",fontSize:11}}>{gs?.timeLimit ? gs.timeLimit+"s pro Runde — dann auto-bereit" : "Kein Limit"}</div>
+                </div>
+                <div style={{display:"flex",gap:5}}>
+                  {[null,60,90,120].map(t=>(
+                    <button key={t} onClick={()=>push({...gs,timeLimit:t})}
+                      style={{background:(gs?.timeLimit||null)===t?"#f4a261":"#1b1f2e",border:"1px solid "+(gs?.timeLimit===t?"#f4a261":"#333"),borderRadius:6,color:"#fff",padding:"4px 8px",fontSize:11,cursor:"pointer"}}>
+                      {t===null?"Aus":t+"s"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Lobby chat */}
+            <div style={{background:"#252a3a",borderRadius:12,padding:"10px 14px",marginBottom:8}}>
+              <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:6}}>💬 CHAT</div>
+              <div style={{maxHeight:80,overflowY:"auto",marginBottom:6}}>
+                {(gs?.chat||[]).length===0&&<div style={{color:"#444",fontSize:12}}>Noch keine Nachrichten…</div>}
+                {(gs?.chat||[]).map((m,i)=>(
+                  <div key={i} style={{fontSize:12,marginBottom:2}}>
+                    <span style={{color:m.color,fontWeight:700}}>{m.name}: </span>
+                    <span style={{color:"#bbb"}}>{m.text}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <input value={chatMsg} onChange={e=>setChatMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendChat()}
+                  placeholder="Nachricht…" maxLength={80}
+                  style={{flex:1,background:"#1b1f2e",border:"1px solid #333",borderRadius:7,padding:"7px 10px",color:"#fff",fontSize:13,outline:"none"}}/>
+                <button onClick={sendChat} style={{background:"#457b9d",border:"none",borderRadius:7,color:"#fff",padding:"7px 12px",fontWeight:700,cursor:"pointer"}}>➤</button>
+              </div>
             </div>
             {error&&<div style={{color:"#e76f51",textAlign:"center",fontSize:13,marginTop:10}}>{error}</div>}
           </div>
@@ -1463,7 +1592,10 @@
                 ☰
               </button>
               <span style={{color:"#f4a261",fontWeight:800,fontSize:14}}>Runde {gs.round} · {roomCode}</span>
-              <span style={{color:"#333",fontSize:10}}>{readyCount}/{gs.players.length} bereit · {VERSION}</span>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                {timerSec!==null&&<span style={{color:timerSec<=10?"#e76f51":"#2a9d8f",fontWeight:800,fontSize:15,minWidth:32,textAlign:"center"}}>⏱{timerSec}s</span>}
+                <span style={{color:"#333",fontSize:10}}>{readyCount}/{gs.players.length} bereit</span>
+              </div>
 
               {/* Dropdown menu */}
               {menuOpen && (
@@ -1622,8 +1754,8 @@
             {!me.ready && (
               <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
                 <div style={{color:"#555",fontSize:11,letterSpacing:1,marginBottom:10}}>AKTIONEN</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
-                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handeln",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"},{key:"raid",label:"🏛️ Finanzamt",col:"#e76f51"}].map(({key,label,col})=>(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:5}}>
+                  {[{key:"bank",label:"💱 Bank",col:"#457b9d"},{key:"player",label:"🤝 Handel",col:"#9b59b6"},{key:"build",label:"🏗 Bauen",col:"#f4a261"},{key:"raid",label:"🏛️ Finanzamt",col:"#e76f51"},{key:"tech",label:"🔬 Technik",col:"#2a9d8f"}].map(({key,label,col})=>(
                     <button key={key}
                       onClick={()=>{setPanel(p=>p===key?null:key); if(key!=="bank"){setBankRes(null);} if(key!=="player"){resetTrade();}}}
                       style={{background:panel===key?col:"#3a3f52",border:"2px solid "+(panel===key?col:"transparent"),borderRadius:8,color:"#fff",padding:"11px 6px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
@@ -1635,9 +1767,14 @@
                 {/* Bank */}
                 {panel==="bank"&&(
                   <div style={{background:"#1b1f2e",borderRadius:10,padding:12,marginTop:10}}>
-                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>{hasHafen?"Hafen: alle Tausche 2:1":"Bank-Tausch:"}</div>
+                    {(() => {
+                      const hasHaendler = (me.activeTechs||[]).includes("haendler");
+                      const bonus2to1 = hasHafen || hasHaendler;
+                      const bonusLabel = hasHaendler ? "Händler: alle Tausche 2:1" : "Hafen: alle Tausche 2:1";
+                      return (<>
+                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>{bonus2to1 ? bonusLabel : "Bank-Tausch:"}</div>
                     {[
-                      {label:"Ressource → Gold", trades: hasHafen
+                      {label:"Ressource → Gold", trades: bonus2to1
                         ? [{give:"Holz",amt:2,get:"Gold",label:"2🪵→1🪙"},{give:"Getreide",amt:2,get:"Gold",label:"2🌾→1🪙"},{give:"Stein",amt:2,get:"Gold",label:"2🪨→1🪙"}]
                         : BANK_TRADES.filter(t=>t.get==="Gold")},
                       {label:"Gold → Ressource (2:1)", trades: BANK_TRADES.filter(t=>t.give==="Gold")},
@@ -1658,6 +1795,7 @@
                         </div>
                       </div>
                     ))}
+                    </>); })()}
                   </div>
                 )}
 
@@ -1813,6 +1951,36 @@
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Tech panel */}
+            {panel==="tech"&&!me.ready&&(
+              <div style={{background:"#252a3a",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+                <div style={{color:"#2a9d8f",fontSize:11,letterSpacing:1,marginBottom:8}}>🔬 TECHNOLOGIE — einmalige Effekte diese Runde</div>
+                {(me.activeTechs||[]).length>0&&(
+                  <div style={{marginBottom:8,display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {(me.activeTechs||[]).map(tid=>{const tc=TECH_CARDS.find(t=>t.id===tid);return tc&&<span key={tid} style={{background:"#1a3a2a",border:"1px solid #2a9d8f",borderRadius:6,color:"#2a9d8f",fontSize:11,padding:"3px 8px"}}>{tc.label} ✓</span>;})}
+                  </div>
+                )}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {TECH_CARDS.map(tc=>{
+                    const owned = (me.activeTechs||[]).includes(tc.id);
+                    const ok = !owned && canAfford(me.resources, tc.cost);
+                    return (
+                      <button key={tc.id} onClick={()=>ok&&doTech(tc)}
+                        style={{background:owned?"#1a3a2a":ok?"#1a2a3a":"#1b1f2e",border:"1px solid "+(owned?"#2a9d8f":ok?"#2a9d8f44":"#333"),borderRadius:9,padding:"9px 8px",cursor:ok?"pointer":"default",textAlign:"left",opacity:ok||owned?1:0.45}}>
+                        <div style={{color:owned?"#2a9d8f":"#fff",fontWeight:700,fontSize:12,marginBottom:2}}>{tc.label}{owned?" ✓":""}</div>
+                        <div style={{color:"#666",fontSize:10,marginBottom:5}}>{tc.desc}</div>
+                        <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                          {Object.entries(tc.cost).map(([r,v])=>(
+                            <span key={r} style={{background:"#252a3a",borderRadius:3,padding:"1px 5px",fontSize:10,color:(me.resources[r]||0)>=v?"#2a9d8f":"#555"}}>{RES_ICONS[r]}{v}</span>
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
