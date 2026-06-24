@@ -76,6 +76,31 @@
       ]},
     ];
 
+    // Gebäude-Voraussetzungen
+    const BUILDING_REQS = {
+      markt:  { requiresAny: [{id:"farm",level:1},{id:"sawmill",level:1}] },
+      hafen:  { requires: [{id:"markt",level:1}] },
+      tempel: { requires: [{id:"mine",level:1}] },
+      uni:    { requires: [{id:"markt",level:1}] },
+      burg:   { requires: [{id:"tempel",level:1}] },
+    };
+    function meetsReqs(player, bid) {
+      const req = BUILDING_REQS[bid];
+      if (!req) return true;
+      const b = player.buildings || {};
+      if (req.requires && req.requires.some(r => (b[r.id]||0) < r.level)) return false;
+      if (req.requiresAny && !req.requiresAny.some(r => (b[r.id]||0) >= r.level)) return false;
+      return true;
+    }
+    function reqLabel(bid) {
+      const req = BUILDING_REQS[bid];
+      if (!req) return null;
+      const name = id => { const b = BUILDINGS.find(x=>x.id===id); return b ? b.icon+" "+b.name : id; };
+      if (req.requires) return "Braucht: "+req.requires.map(r=>name(r.id)+" Lv"+r.level).join(" + ");
+      if (req.requiresAny) return "Braucht: "+req.requiresAny.map(r=>name(r.id)).join(" oder ");
+      return null;
+    }
+
     // Mehrfach-Bauen: Kostenmultiplikator pro zusätzlichem Gebäude in dieser Runde
     const BUILD_MULTI_MULT = [1, 1.6, 2.3]; // 1. Bau normal, 2. Bau teurer, 3. Bau am teuersten
     const MAX_BUILDS_PER_ROUND = 3;
@@ -347,6 +372,7 @@
           const plannedForThis = pending.filter(pb => pb.bid === b.id).length;
           const cur = (p.buildings[b.id] || 0) + plannedForThis;
           if (cur >= 3) continue;
+          if (!meetsReqs(p, b.id)) continue;
           const bd = b.levels[cur];
           const mult = BUILD_MULTI_MULT[pending.length] || BUILD_MULTI_MULT[BUILD_MULTI_MULT.length - 1];
           const cost = scaleCost(bd.cost, mult * mode.costMulti);
@@ -592,6 +618,7 @@
         const alreadyPlannedForThis = pending.filter(pb => pb.bid === bid).length;
         const cur = (me.buildings[bid] || 0) + alreadyPlannedForThis;
         if (!b || cur >= 3) return;
+        if (!meetsReqs(me, bid)) return;
         const bd = b.levels[cur]; // next level
         const mult = BUILD_MULTI_MULT[pending.length] || BUILD_MULTI_MULT[BUILD_MULTI_MULT.length-1];
         const scaledCost = scaleCost(bd.cost, mult * getMode(gs).costMulti);
@@ -1391,25 +1418,32 @@
                         const mult = BUILD_MULTI_MULT[pending.length] || BUILD_MULTI_MULT[BUILD_MULTI_MULT.length-1];
                         const scaledCost = maxed ? bd.cost : scaleCost(bd.cost, mult * getMode(gs).costMulti);
                         const atLimit = pending.length >= MAX_BUILDS_PER_ROUND;
-                        const ok = !maxed && !atLimit && canAfford(me.resources, scaledCost);
+                        const locked = !meetsReqs(me, b.id);
+                        const ok = !maxed && !atLimit && !locked && canAfford(me.resources, scaledCost);
                         return (
                           <button key={b.id} onClick={()=>ok&&doBuild(b.id)}
-                            style={{background:maxed?"#1a3a1a":(plannedForThis>0?"#1e2a3a":(ok?"#252a3a":"#1b1f2e")),border:"1px solid "+(maxed?"#2a9d8f":(ok?"#444":"#222")),borderRadius:8,padding:"8px 10px",textAlign:"left",cursor:ok?"pointer":"default",opacity:maxed?0.7:(ok?1:(plannedForThis>0?0.7:0.4))}}>
+                            style={{background:maxed?"#1a3a1a":(locked?"#1a1a1a":(plannedForThis>0?"#1e2a3a":(ok?"#252a3a":"#1b1f2e"))),border:"1px solid "+(maxed?"#2a9d8f":(locked?"#2a2a2a":(ok?"#444":"#222"))),borderRadius:8,padding:"8px 10px",textAlign:"left",cursor:ok?"pointer":"default",opacity:maxed?0.7:(locked?0.5:(ok?1:(plannedForThis>0?0.7:0.4)))}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:2}}>
-                              <div><span style={{fontSize:14}}>{b.icon}</span><span style={{color:"#fff",fontWeight:700,fontSize:12,marginLeft:4}}>{b.name}</span></div>
+                              <div><span style={{fontSize:14}}>{locked?"🔒":b.icon}</span><span style={{color:locked?"#555":"#fff",fontWeight:700,fontSize:12,marginLeft:4}}>{b.name}</span></div>
                               <LevelDots level={cur}/>
                             </div>
-                            <div style={{color:"#666",fontSize:10,marginBottom:4}}>
-                              {maxed?"MAX "+bd.desc:(cur>0?"→ Stufe "+nxt+": "+bd.desc:bd.desc)}
-                            </div>
-                            {!maxed&&(
-                              <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-                                {Object.entries(scaledCost).map(([r,v])=>(
-                                  <span key={r} style={{background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:(me.resources[r]||0)>=v?"#2a9d8f":"#e76f51"}}>{RES_ICONS[r]}{v}</span>
-                                ))}
-                                <span style={{background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:"#f4a261"}}>+{bd.vp}VP</span>
-                                {mult>1 && <span style={{background:"#3a2a10",borderRadius:4,padding:"1px 5px",fontSize:10,color:"#f4a261"}}>×{mult}</span>}
-                              </div>
+                            {locked ? (
+                              <div style={{color:"#555",fontSize:10}}>{reqLabel(b.id)}</div>
+                            ) : (
+                              <>
+                                <div style={{color:"#666",fontSize:10,marginBottom:4}}>
+                                  {maxed?"MAX "+bd.desc:(cur>0?"→ Stufe "+nxt+": "+bd.desc:bd.desc)}
+                                </div>
+                                {!maxed&&(
+                                  <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+                                    {Object.entries(scaledCost).map(([r,v])=>(
+                                      <span key={r} style={{background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:(me.resources[r]||0)>=v?"#2a9d8f":"#e76f51"}}>{RES_ICONS[r]}{v}</span>
+                                    ))}
+                                    <span style={{background:"#333",borderRadius:4,padding:"1px 5px",fontSize:10,color:"#f4a261"}}>+{bd.vp}VP</span>
+                                    {mult>1 && <span style={{background:"#3a2a10",borderRadius:4,padding:"1px 5px",fontSize:10,color:"#f4a261"}}>×{mult}</span>}
+                                  </div>
+                                )}
+                              </>
                             )}
                           </button>
                         );
