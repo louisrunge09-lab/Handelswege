@@ -278,7 +278,7 @@
       normal:  { label: "🏆 Normal",  winVP: 50,  resMulti: 1.0, incMulti: 1.0, costMulti: 1.0,  desc: "50 VP · Standard" },
       hard:    { label: "💀 Hard",    winVP: 100, resMulti: 0.5, incMulti: 0.7, costMulti: 1.4,  desc: "100 VP · Teuer & wenig Res." },
     };
-    function getWinVP(gs) { return (MODES[gs?.gameMode] || MODES.normal).winVP; }
+    function getWinVP(gs) { return gs?.customVP || (MODES[gs?.gameMode] || MODES.normal).winVP; }
     function getMode(gs) { return MODES[gs?.gameMode] || MODES.normal; }
 
     const BUILDINGS = [
@@ -480,8 +480,9 @@
     }
 
     // Spielstand initialisieren — alle Spieler gleichzeitig aktiv
-    function initGameState(players, gameMode) {
+    function initGameState(players, gameMode, customVP) {
       const mode = gameMode || "schnell";
+      const winVP = customVP || (MODES[mode] || MODES.normal).winVP;
       const ps = players.map((p, i) => ({
         ...p,
         resources: randomResources(i, mode),
@@ -496,7 +497,8 @@
         round: 1,
         phase: "playing",
         gameMode: mode,
-        log: ["Runde 1 beginnt — alle spielen gleichzeitig! Ziel: " + (MODES[mode] || MODES.normal).winVP + " VP"],
+        customVP: customVP || null,
+        log: ["Runde 1 beginnt — alle spielen gleichzeitig! Ziel: " + winVP + " VP"],
         chat: [],
         tradeOffers: [],
         alliances: [],
@@ -760,6 +762,29 @@
         }
       }
 
+      // 5. Sabotage — wenn kein Raid geplant und genug Gold: teuerstes Gebäude des reichsten Gegners sabotieren
+      if (!p.pendingRaeuber && !p.pendingSabotage && (p.resources.Gold||0) >= 5) {
+        const allies = (gs.alliances||[]).filter(a=>(a.a===aiIdx||a.b===aiIdx)&&a.endsAfter>gs.round);
+        let bestSab = null, bestSabScore = -1;
+        for (let ti = 0; ti < gs.players.length; ti++) {
+          if (ti === aiIdx) continue;
+          if (allies.find(a=>(a.a===ti||a.b===ti))) continue;
+          const tp = gs.players[ti];
+          for (const b of BUILDINGS) {
+            const lvl = tp.buildings[b.id] || 0;
+            if (!lvl) continue;
+            const cost = SABOTAGE_COST[lvl];
+            if ((p.resources.Gold||0) < cost) continue;
+            const score = lvl * (b.levels[lvl-1]?.vp || 1);
+            if (score > bestSabScore) { bestSabScore = score; bestSab = {target:ti, bid:b.id, cost}; }
+          }
+        }
+        if (bestSab && Math.random() < 0.35) {
+          p.resources = {...p.resources, Gold: (p.resources.Gold||0) - bestSab.cost};
+          p.pendingSabotage = {target: bestSab.target, bid: bestSab.bid};
+        }
+      }
+
       p.ready = true;
       return p;
     }
@@ -899,6 +924,7 @@
       const [feedback, setFeedback] = useState("");
       const [isSolo, setIsSolo] = useState(false);
       const [soloMode, setSoloMode] = useState("normal");
+      const [soloVP, setSoloVP] = useState(50);
       const [numAI, setNumAI] = useState(1);
       const [timerSec, setTimerSec] = useState(null);
       const timerRef = useRef(null);
@@ -1091,7 +1117,7 @@
           { name: myName.trim(), color: PLAYER_COLORS[0] },
           ...Array.from({length:numAI}, (_,i) => ({ name: "KI "+(numAI>1?i+1:"")+" 🤖".trim(), color: PLAYER_COLORS[i+1] })),
         ];
-        const state = initGameState(players, soloMode);
+        const state = initGameState(players, soloMode, soloVP);
         setIsSolo(true); setMyIndex(0); setIsHost(true); setGs(state); setScreen("game");
       }
 
@@ -1739,17 +1765,27 @@
                 {Object.entries(MODES).map(([id,m])=>{
                   const active = soloMode===id;
                   return (
-                    <button key={id} onClick={()=>setSoloMode(id)} className="mode-btn"
+                    <button key={id} onClick={()=>{setSoloMode(id);setSoloVP(m.winVP);}} className="mode-btn"
                       style={{background:active?"rgba(155,89,182,0.15)":"#13172280",border:"2px solid "+(active?"#9b59b6":"#2a2e42"),borderRadius:10,padding:"10px 4px 8px",cursor:"pointer",textAlign:"center"}}>
                       <div style={{fontSize:16,marginBottom:3}}>{m.label.split(" ")[0]}</div>
                       <div style={{color:"#fff",fontWeight:700,fontSize:11,marginBottom:2}}>{m.label.split(" ").slice(1).join(" ")}</div>
-                      <div style={{color:active?"#b370d4":"#3a4060",fontSize:10,fontWeight:600}}>{m.winVP} VP</div>
+                      <div style={{color:active?"#b370d4":"#3a4060",fontSize:10,fontWeight:600}}>{m.desc}</div>
                     </button>
                   );
                 })}
               </div>
-              <div style={{background:"#13172280",borderRadius:8,padding:"6px 10px",marginBottom:10,color:"#6a7090",fontSize:11}}>
-                {MODES[soloMode]?.desc}
+              {/* VP Slider */}
+              <div style={{background:"#13172280",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <span style={{color:"#6a7090",fontSize:11,fontWeight:600,letterSpacing:1}}>SIEGPUNKTE-ZIEL</span>
+                  <span style={{color:"#b370d4",fontSize:18,fontWeight:900,lineHeight:1}}>{soloVP} <span style={{fontSize:11,fontWeight:600}}>VP</span></span>
+                </div>
+                <input type="range" min={10} max={150} step={5} value={soloVP}
+                  onChange={e=>setSoloVP(Number(e.target.value))}
+                  style={{width:"100%",accentColor:"#9b59b6",cursor:"pointer"}}/>
+                <div style={{display:"flex",justifyContent:"space-between",color:"#3a4060",fontSize:10,marginTop:3}}>
+                  <span>10 — Blitz</span><span>150 — Marathon</span>
+                </div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
                 <div style={{color:"#4a5070",fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>KI-Gegner:</div>
