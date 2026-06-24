@@ -2220,36 +2220,77 @@
 
                 {/* Bank */}
                 {panel==="bank"&&(
-                  <div style={{background:"#1b1f2e",borderRadius:10,padding:12,marginTop:10}}>
-                    {(() => {
+                  <div style={{background:"#13172280",borderRadius:12,padding:"12px 10px",marginTop:10,border:"1px solid #1e2235"}}>
+                    {(()=>{
                       const hasHaendler = (me.activeTechs||[]).includes("haendler");
                       const bonus2to1 = hasHafen || hasHaendler;
-                      const bonusLabel = hasHaendler ? "Händler: alle Tausche 2:1" : "Hafen: alle Tausche 2:1";
+                      const bonusSource = hasHaendler ? "Händler-Tech" : "Hafen";
+                      const sellTrades = bonus2to1
+                        ? [{give:"Holz",amt:2,get:"Gold"},{give:"Getreide",amt:2,get:"Gold"},{give:"Stein",amt:2,get:"Gold"}]
+                        : BANK_TRADES.filter(t=>t.get==="Gold");
+                      const buyTrades = BANK_TRADES.filter(t=>t.give==="Gold");
+                      const RES_COLOR = {Holz:"#c8823a",Stein:"#8090a8",Getreide:"#c8a840",Gold:"#e9c46a"};
+
+                      function TradeCard({t, accent}) {
+                        const stock = me.resources[t.give]||0;
+                        const canDo = stock >= t.amt;
+                        const need = t.amt - stock;
+                        return (
+                          <button onClick={()=>canDo&&doBankTrade(t)}
+                            className={canDo?"action-tab":""}
+                            style={{
+                              background: canDo ? "linear-gradient(160deg,#1e2436,#181d2e)" : "#111520",
+                              border: "1px solid "+(canDo ? accent+"55" : "#1e2235"),
+                              borderRadius:10, padding:"10px 8px", cursor:canDo?"pointer":"default",
+                              textAlign:"center", width:"100%",
+                              opacity: canDo ? 1 : 0.55,
+                            }}>
+                            <div style={{fontSize:22,marginBottom:4}}>{RES_ICONS[t.give]}</div>
+                            <div style={{color:"#c8d0e8",fontSize:11,fontWeight:700,marginBottom:6}}>
+                              {t.give}
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4,marginBottom:8}}>
+                              <span style={{color:RES_COLOR[t.give]||"#aaa",fontWeight:900,fontSize:14}}>{t.amt}</span>
+                              <span style={{color:"#3a4060",fontSize:12}}>→</span>
+                              <span style={{color:RES_COLOR[t.get]||"#aaa",fontWeight:900,fontSize:14}}>1</span>
+                              <span style={{fontSize:14}}>{RES_ICONS[t.get]}</span>
+                            </div>
+                            {canDo ? (
+                              <div style={{background:accent+"22",border:"1px solid "+accent+"44",borderRadius:6,padding:"4px 0",color:accent,fontSize:11,fontWeight:700}}>
+                                Tauschen
+                              </div>
+                            ) : (
+                              <div style={{color:"#3a4060",fontSize:10}}>
+                                noch {need} {RES_ICONS[t.give]} fehlen
+                              </div>
+                            )}
+                            <div style={{color:"#3a4060",fontSize:10,marginTop:4}}>
+                              Bestand: {stock}
+                            </div>
+                          </button>
+                        );
+                      }
+
                       return (<>
-                    <div style={{color:"#666",fontSize:12,marginBottom:8}}>{bonus2to1 ? bonusLabel : "Bank-Tausch:"}</div>
-                    {[
-                      {label:"Ressource → Gold", trades: bonus2to1
-                        ? [{give:"Holz",amt:2,get:"Gold",label:"2🪵→1🪙"},{give:"Getreide",amt:2,get:"Gold",label:"2🌾→1🪙"},{give:"Stein",amt:2,get:"Gold",label:"2🪨→1🪙"}]
-                        : BANK_TRADES.filter(t=>t.get==="Gold")},
-                      {label:"Gold → Ressource (2:1)", trades: BANK_TRADES.filter(t=>t.give==="Gold")},
-                    ].map(section=>(
-                      <div key={section.label} style={{marginBottom:10}}>
-                        <div style={{color:"#555",fontSize:10,letterSpacing:1,marginBottom:5}}>{section.label}</div>
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5}}>
-                          {section.trades.map((t,i)=>{
-                            const canDo = (me.resources[t.give]||0) >= t.amt;
-                            return (
-                              <button key={i} onClick={()=>canDo&&doBankTrade(t)}
-                                style={{background:canDo?"#252a3a":"#1b1f2e",border:"1px solid "+(canDo?"#457b9d":"#222"),borderRadius:8,padding:"8px 4px",cursor:canDo?"pointer":"default",opacity:canDo?1:0.4,textAlign:"center"}}>
-                                <div style={{color:"#fff",fontSize:12,fontWeight:700}}>{t.label}</div>
-                                <div style={{color:"#555",fontSize:10}}>({me.resources[t.give]||0})</div>
-                              </button>
-                            );
-                          })}
+                        {bonus2to1 && (
+                          <div style={{background:"rgba(244,162,97,0.08)",border:"1px solid rgba(244,162,97,0.25)",borderRadius:8,padding:"6px 10px",marginBottom:12,display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:14}}>⭐</span>
+                            <span style={{color:"#f4a261",fontSize:11,fontWeight:700}}>{bonusSource}: alle Tausche 2:1</span>
+                          </div>
+                        )}
+                        <div style={{color:"#3a4060",fontSize:10,letterSpacing:1,fontWeight:700,marginBottom:8}}>💰 RESSOURCEN VERKAUFEN</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:14}}>
+                          {sellTrades.map((t,i)=><TradeCard key={i} t={t} accent="#f4a261"/>)}
                         </div>
-                      </div>
-                    ))}
-                    </>); })()}
+                        <div style={{color:"#3a4060",fontSize:10,letterSpacing:1,fontWeight:700,marginBottom:8}}>🏦 RESSOURCEN KAUFEN</div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+                          {buyTrades.map((t,i)=><TradeCard key={i} t={t} accent="#457b9d"/>)}
+                        </div>
+                        <div style={{color:"#2a2e42",fontSize:10,marginTop:10,textAlign:"center"}}>
+                          Die Bank tauscht jederzeit — ohne Zustimmung anderer Spieler.
+                        </div>
+                      </>);
+                    })()}
                   </div>
                 )}
 
