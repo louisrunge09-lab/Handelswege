@@ -373,12 +373,13 @@
 
     // Technologiekarten — einmalige Effekte, pro Runde kaufbar
     const TECH_CARDS = [
-      { id:"doppel",   label:"⚡ Doppeleinkommen", desc:"Diese Runde 2× Einkommen",       cost:{Gold:4} },
-      { id:"steuer",   label:"🛡️ Steuerberater",  desc:"Finanzamt überspringt dich",      cost:{Gold:5} },
-      { id:"haendler", label:"🔄 Händler",         desc:"Alle Bank-Tausche 2:1 diese Runde",cost:{Gold:3} },
-      { id:"bauboom",  label:"🏗️ Bauboom",         desc:"+1 Bauplatz diese Runde (max 4)", cost:{Gold:5} },
-      { id:"ernte2",   label:"🌾 Sonderernte",     desc:"Sofort +5 Getreide",              cost:{Gold:2} },
-      { id:"schatz",   label:"🪙 Schatzsuche",     desc:"Sofort +4 Gold",                 cost:{Stein:3,Holz:3} },
+      { id:"doppel",   label:"⚡ Doppeleinkommen", desc:"Diese Runde 2× Einkommen",          cost:{Gold:4} },
+      { id:"steuer",   label:"🛡️ Steuerberater",  desc:"Finanzamt überspringt dich",         cost:{Gold:5} },
+      { id:"schild",   label:"🔰 Schutzschild",   desc:"Blockt Raid & Sabotage diese Runde", cost:{Gold:4} },
+      { id:"haendler", label:"🔄 Händler",         desc:"Alle Bank-Tausche 2:1 diese Runde", cost:{Gold:3} },
+      { id:"bauboom",  label:"🏗️ Bauboom",         desc:"+1 Bauplatz diese Runde (max 4)",   cost:{Gold:5} },
+      { id:"ernte2",   label:"🌾 Sonderernte",     desc:"Sofort +5 Getreide",                cost:{Gold:2} },
+      { id:"schatz",   label:"🪙 Schatzsuche",     desc:"Sofort +4 Gold",                    cost:{Stein:3,Holz:3} },
     ];
 
     // Ereigniskarten — jede Runde 40% Chance auf ein Ereignis
@@ -1281,6 +1282,7 @@
         }
         const offer = {
           id: Date.now(),
+          id: Date.now()+"_"+Math.random(),
           from: myIndex, fromName: me.name, fromColor: me.color,
           to: ptTarget, toName: gs.players[ptTarget].name,
           offer: {...ptOffer}, want: {...ptWant},
@@ -1580,13 +1582,18 @@
             if (activeEvent.label) raidLogs.push("🎲 EREIGNIS: "+activeEvent.label+" — "+activeEvent.desc);
           }
 
-          // Apply raids — blocked by alliance
+          // Apply raids — blocked by alliance or Schutzschild
           newPlayers.forEach((p, i) => {
             if (!p.pendingRaeuber) return;
             const {target, level} = p.pendingRaeuber;
             const allied = activeAlliances.find(a=>(a.a===i&&a.b===target)||(a.a===target&&a.b===i));
             if (allied) {
               raidLogs.push("🤝 "+p.name+" wollte "+resolved[target].name+" überfallen — aber Allianz schützt!");
+              resolved[i] = {...resolved[i], pendingRaeuber: null};
+              return;
+            }
+            if ((newPlayers[target]?.activeTechs||[]).includes("schild")) {
+              raidLogs.push("🔰 "+resolved[target].name+" hat Schutzschild — Raid abgewehrt!");
               resolved[i] = {...resolved[i], pendingRaeuber: null};
               return;
             }
@@ -1625,10 +1632,19 @@
           });
           resolved = resolved.map(p => ({...p, pendingRaeuber: null}));
 
-          // Apply sabotages
+          // Apply sabotages — blocked by alliance or Schutzschild
           newPlayers.forEach((p, i) => {
             if (!p.pendingSabotage) return;
             const {target, bid} = p.pendingSabotage;
+            const allied = activeAlliances.find(a=>(a.a===i&&a.b===target)||(a.a===target&&a.b===i));
+            if (allied) {
+              raidLogs.push("🤝 "+p.name+" wollte sabotieren — Allianz schützt "+resolved[target].name+"!");
+              resolved[i] = {...resolved[i], pendingSabotage: null}; return;
+            }
+            if ((newPlayers[target]?.activeTechs||[]).includes("schild")) {
+              raidLogs.push("🔰 "+resolved[target].name+" hat Schutzschild — Sabotage abgewehrt!");
+              resolved[i] = {...resolved[i], pendingSabotage: null}; return;
+            }
             const victim = resolved[target];
             const curLvl = victim.buildings[bid] || 0;
             const bName = BUILDINGS.find(b=>b.id===bid)?.name || bid;
@@ -1649,7 +1665,8 @@
           // Finanzamt — pro Spieler eigene Chance, Burg schützt, Frieden-Event überspringt
           if (!activeEvent?.skipFinanzamt) {
             resolved.forEach((p, vi) => {
-              if ((p.activeTechs||[]).includes("steuer")) {
+              const origTechs = newPlayers[vi]?.activeTechs || [];
+              if (origTechs.includes("steuer")) {
                 raidLogs.push("🛡️ "+p.name+" hat Steuerberater — Finanzamt zieht weiter!"); return;
               }
               const total = RESOURCES.reduce((s,r)=>(s+(p.resources[r]||0)),0);
